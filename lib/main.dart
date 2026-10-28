@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'services/theme_service.dart';
-import 'screens/home_screen.dart';
+import 'services/settings_service.dart';
+import 'main_shell.dart';
+
+final ValueNotifier<Locale> appLocaleNotifier = ValueNotifier(const Locale('ru'));
+final ValueNotifier<String> appCurrencyNotifier = ValueNotifier('RUB');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('ru_RU', null);
-
   final isDark = await ThemeService.isDarkTheme();
+  final locale = await SettingsService.getLocale();
+  final currency = await SettingsService.getCurrency();
+
+  appLocaleNotifier.value = locale;
+  appCurrencyNotifier.value = currency;
 
   runApp(ExpenseApp(isDarkTheme: isDark));
 }
 
 class ExpenseApp extends StatefulWidget {
   final bool isDarkTheme;
-
   const ExpenseApp({super.key, required this.isDarkTheme});
 
   @override
@@ -39,17 +45,36 @@ class _ExpenseAppState extends State<ExpenseApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Расходы',
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('ru', 'RU'),
-      theme: _isDark ? _darkTheme : _lightTheme,
-      home: HomeScreen(onThemeChanged: toggleTheme),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: appLocaleNotifier,
+      builder: (context, locale, child) {
+        return ValueListenableBuilder<String>(
+          valueListenable: appCurrencyNotifier,
+          builder: (context, currency, child) {
+            return MaterialApp(
+              title: 'Учёт расходов',
+              debugShowCheckedModeBanner: false,
+              locale: locale,
+              supportedLocales: const [
+                Locale('ru', 'RU'),
+                Locale('en', 'US'),
+              ],
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              theme: _isDark ? _darkTheme : _lightTheme,
+              home: MainShell(onThemeChanged: toggleTheme),
+            );
+          },
+        );
+      },
     );
   }
 
-  // Тёмная тема
   ThemeData get _darkTheme => ThemeData(
+    useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: const Color(0xFF121218),
     colorScheme: const ColorScheme.dark(
@@ -67,8 +92,8 @@ class _ExpenseAppState extends State<ExpenseApp> {
     ),
   );
 
-  // Светлая тема
   ThemeData get _lightTheme => ThemeData(
+    useMaterial3: true,
     brightness: Brightness.light,
     scaffoldBackgroundColor: const Color(0xFFF5F5F5),
     colorScheme: const ColorScheme.light(

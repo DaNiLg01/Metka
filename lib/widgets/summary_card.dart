@@ -1,43 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../main.dart'; // Импортируем глобальные нотифаеры валюты и языка
 
 class SummaryCard extends StatelessWidget {
   final double total;
 
   const SummaryCard({super.key, required this.total});
 
-  String get _monthName {
-    final now = DateTime.now();
-    return DateFormat('MMMM', 'ru_RU').format(now);
+  /// Получение символа валюты на основе настроек
+  String _getCurrencySymbol(String currencyCode) {
+    switch (currencyCode) {
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'RUB':
+      default:
+        return '₽';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Получаем текущие настройки из глобальных переменных
+    final currencyCode = appCurrencyNotifier.value;
+    final localeCode = appLocaleNotifier.value.languageCode;
+    final currencySymbol = _getCurrencySymbol(currencyCode);
+
+    // Форматируем число с пробелами (например, 1 250 000)
+    // Используем локаль, соответствующую выбранному языку
+    final formatter = NumberFormat('#,##0', localeCode == 'ru' ? 'ru_RU' : 'en_US');
+    final formattedTotal = formatter.format(total);
+
+    // Получаем название текущего месяца на выбранном языке
+    final monthName = DateFormat('MMMM', localeCode).format(DateTime.now()).toLowerCase();
+
+    // Делаем первую букву заглавной для красоты (например, "Октябрь" или "October")
+    final displayMonth = monthName.isNotEmpty
+        ? monthName[0].toUpperCase() + monthName.substring(1)
+        : monthName;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           Text(
-            'За ${_monthName.toLowerCase()}',
+            'За $displayMonth',
             style: TextStyle(
               fontSize: 16,
-              color: isDark ? const Color(0xFF8B8B9E) : const Color(0xFF666666),
+              // ✅ ИСПРАВЛЕНО: Убран хардкод цвета, используется цвет темы
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            '- ${total.toStringAsFixed(0)} ₽',
+            // Если в дизайне нужен минус перед суммой, оставь '- '. Если нет, просто убери его.
+            '- $formattedTotal $currencySymbol',
             style: TextStyle(
               fontSize: 42,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF121218),
+              // ✅ ИСПРАВЛЕНО: Убран хардкод цвета, используется цвет темы
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ],
