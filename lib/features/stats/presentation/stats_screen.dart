@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../services/app_strings.dart';
-import '../services/stats_service.dart';
-import '../services/storage_service.dart';
-import '../models/expense.dart';
+import '../../../core/localization/app_strings.dart';
+import '../data/stats_service.dart';
+import '../../expenses/data/services/storage_service.dart';
+import '../../expenses/data/models/expense.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -162,7 +162,8 @@ class _StatsScreenState extends State<StatsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${_totalAmount.toStringAsFixed(0)} ₽',
+                      // ✅ ИСПРАВЛЕНО: Динамическая валюта
+                      '${_totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
                       style: TextStyle(
                         color: textColor,
                         fontSize: 32,
@@ -211,7 +212,8 @@ class _StatsScreenState extends State<StatsScreen> {
                                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${stat.categoryName}: ${stat.totalAmount.toStringAsFixed(0)} ₽'),
+                                    // ✅ ИСПРАВЛЕНО: Динамическая валюта
+                                    content: Text('${AppStrings.translateCategory(stat.categoryName)}: ${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}'),
                                     duration: const Duration(seconds: 1),
                                   ),
                                 );
@@ -236,12 +238,13 @@ class _StatsScreenState extends State<StatsScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                stat.categoryName,
+                                AppStrings.translateCategory(stat.categoryName),
                                 style: TextStyle(color: textColor),
                               ),
                             ),
                             Text(
-                              '${stat.totalAmount.toStringAsFixed(0)} ₽',
+                              // ✅ ИСПРАВЛЕНО: Динамическая валюта
+                              '${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
                               style: TextStyle(color: subtitleColor),
                             ),
                           ],
@@ -274,7 +277,7 @@ class _StatsScreenState extends State<StatsScreen> {
                           BarChartData(
                             barGroups: _dailyStats.map((stat) {
                               return BarChartGroupData(
-                                x: _dailyStats.indexOf(stat), // ✅ ИСПРАВЛЕНО: строго int
+                                x: _dailyStats.indexOf(stat),
                                 barRods: [
                                   BarChartRodData(
                                     toY: stat.totalAmount,
@@ -311,11 +314,12 @@ class _StatsScreenState extends State<StatsScreen> {
                             barTouchData: BarTouchData(
                               enabled: true,
                               touchTooltipData: BarTouchTooltipData(
-                                getTooltipColor: (group) => const Color(0xFF3D5A80), // ✅ ИСПРАВЛЕНО для 0.69.2
+                                getTooltipColor: (group) => const Color(0xFF3D5A80),
                                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
                                   final stat = _dailyStats[groupIndex];
                                   return BarTooltipItem(
-                                    '${stat.date.day}.${stat.date.month}\n${stat.totalAmount.toStringAsFixed(0)} ₽',
+                                    // ✅ ИСПРАВЛЕНО: Динамическая валюта
+                                    '${stat.date.day}.${stat.date.month}\n${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
                                     const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -328,7 +332,6 @@ class _StatsScreenState extends State<StatsScreen> {
                               touchCallback: (FlTouchEvent event, barTouchResponse) {
                                 if (!event.isInterestedForInteractions || barTouchResponse == null || barTouchResponse.spot == null) return;
 
-                                // ✅ ИСПРАВЛЕНО: правильный способ получить int индекс в fl_chart 0.69.x
                                 final spot = barTouchResponse.spot!;
                                 final int index = spot.touchedBarGroup.x;
                                 final stat = _dailyStats[index];
@@ -336,7 +339,8 @@ class _StatsScreenState extends State<StatsScreen> {
                                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${stat.date.day}.${stat.date.month}: ${stat.totalAmount.toStringAsFixed(0)} ₽'),
+                                    // ✅ ИСПРАВЛЕНО: Динамическая валюта
+                                    content: Text('${stat.date.day}.${stat.date.month}: ${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}'),
                                     duration: const Duration(seconds: 1),
                                   ),
                                 );

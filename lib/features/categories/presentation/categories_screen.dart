@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/app_strings.dart';
-import '../models/category.dart';
-import '../services/category_service.dart';
-// Если у тебя файл диалога называется иначе, измени эту строку (например, 'add_category_screen.dart')
+import '../../../core/localization/app_strings.dart';
+import '../data/category.dart';
+import '../data/category_service.dart';
+import '../../expenses/data/services/storage_service.dart';
 import 'category_form_dialog.dart';
 
 class CategoriesScreen extends StatefulWidget {
@@ -45,42 +45,87 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Future<void> _deleteCategory(Category category) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppStrings.tr('delete')),
-        content: Text('Категория "${category.name}" будет удалена.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(AppStrings.tr('cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(AppStrings.tr('delete')),
-          ),
-        ],
-      ),
-    );
+    final expenses = await StorageService.loadExpenses();
+    final expensesCount = expenses.where((e) => e.category.name == category.name).length;
 
-    if (confirmed == true) {
+    bool confirmDelete = false;
+
+    if (expensesCount > 0) {
+      confirmDelete = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(AppStrings.tr('cannotDeleteCategory')),
+          content: Text(
+            AppStrings.tr('categoryUsedInExpenses', params: {
+              'name': AppStrings.translateCategory(category.name),
+              'count': expensesCount.toString(),
+            }),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(AppStrings.tr('cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: Text(AppStrings.tr('deleteAnyway')),
+            ),
+          ],
+        ),
+      ) ??
+          false;
+    } else {
+      confirmDelete = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(AppStrings.tr('delete')),
+          content: Text(
+            AppStrings.tr('deleteCategoryConfirm', params: {'name': AppStrings.translateCategory(category.name)}),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(AppStrings.tr('cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(AppStrings.tr('delete')),
+            ),
+          ],
+        ),
+      ) ??
+          false;
+    }
+
+    if (confirmDelete) {
       await CategoryService.deleteCategory(category.id);
       _loadCategories();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppStrings.tr('categoryDeleted')),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? const Color(0xFF1E1E2E) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF121218);
-    final subtitleColor = isDark ? const Color(0xFF8B8B9E) : const Color(0xFF666666);
+    final surfaceColor = colorScheme.surface;
+    final textColor = colorScheme.onSurface;
+    final subtitleColor = colorScheme.onSurfaceVariant;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           AppStrings.tr('categoriesScreen'),
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colorScheme.onPrimary),
         ),
       ),
       body: _categories.isEmpty
@@ -91,7 +136,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             Icon(Icons.category, size: 64, color: subtitleColor),
             const SizedBox(height: 16),
             Text(
-              'Нет категорий. Нажмите +, чтобы добавить.',
+              AppStrings.tr('noCategories'),
               style: TextStyle(color: subtitleColor, fontSize: 16),
             ),
           ],
@@ -116,7 +161,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 child: Icon(category.iconData, color: category.color, size: 24),
               ),
               title: Text(
-                category.name,
+                AppStrings.translateCategory(category.name),
                 style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w500),
               ),
               trailing: Row(

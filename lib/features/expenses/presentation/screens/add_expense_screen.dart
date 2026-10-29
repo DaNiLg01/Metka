@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
-import '../models/expense.dart';
+import '../../../../core/localization/app_strings.dart';
+import '../../data/models/expense.dart';
 
-/// Экран добавления/редактирования расхода
 class AddExpenseScreen extends StatefulWidget {
-  /// Если expense == null — режим создания, иначе — редактирование
   final Expense? expense;
 
   const AddExpenseScreen({super.key, this.expense});
@@ -23,26 +22,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   late DateTime _selectedDate;
   bool _hasChanges = false;
 
-  /// Проверяем, режим редактирования или создания
   bool get isEditMode => widget.expense != null;
 
   @override
   void initState() {
     super.initState();
-    // Инициализация полей: если редактируем — заполняем существующими данными
-    _titleController = TextEditingController(
-      text: widget.expense?.title ?? '',
-    );
-    _descriptionController = TextEditingController(
-      text: widget.expense?.description ?? '',
-    );
-    _amountController = TextEditingController(
-      text: widget.expense != null ? widget.expense!.amount.toString() : '',
-    );
+    _titleController = TextEditingController(text: widget.expense?.title ?? '');
+    _descriptionController = TextEditingController(text: widget.expense?.description ?? '');
+    _amountController = TextEditingController(text: widget.expense != null ? widget.expense!.amount.toString() : '');
     _selectedCategory = widget.expense?.category ?? ExpenseCategory.food;
     _selectedDate = widget.expense?.date ?? DateTime.now();
 
-    // Слушатели для отслеживания изменений (нужно для диалога "Выйти без сохранения")
     _titleController.addListener(_markChanged);
     _descriptionController.addListener(_markChanged);
     _amountController.addListener(_markChanged);
@@ -50,9 +40,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   void _markChanged() {
     if (!_hasChanges) {
-      setState(() {
-        _hasChanges = true;
-      });
+      setState(() { _hasChanges = true; });
     }
   }
 
@@ -64,7 +52,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.dispose();
   }
 
-  /// Выбор даты через системный date picker
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -80,7 +67,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  /// Сохранение расхода
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -96,52 +82,35 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     Navigator.pop(context, expense);
   }
 
-  /// Удаление расхода (только в режиме редактирования)
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Удалить расход?'),
-        content: const Text('Это действие нельзя отменить.'),
+        title: Text(AppStrings.tr('deleteExpense')),
+        content: Text(AppStrings.tr('cannotUndo')),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Удалить'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppStrings.tr('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.red), child: Text(AppStrings.tr('delete'))),
         ],
       ),
     );
 
     if (confirmed == true) {
-      // 🔧 ИСПРАВЛЕНО: возвращаем строку 'DELETE' вместо null
-      // Это нужно, чтобы HomeScreen отличил удаление от простого закрытия экрана
       Navigator.pop(context, 'DELETE');
     }
   }
 
-  /// Проверка перед выходом (если есть несохранённые изменения)
   Future<bool> _confirmExit() async {
     if (!_hasChanges) return true;
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Выйти без сохранения?'),
-        content: const Text('Введённые данные будут потеряны.'),
+        title: Text(AppStrings.tr('exitWithoutSaving')),
+        content: Text(AppStrings.tr('dataWillBeLost')),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Остаться'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Выйти'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppStrings.tr('stay'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(AppStrings.tr('exit'))),
         ],
       ),
     );
@@ -151,10 +120,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? const Color(0xFF1E1E2E) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF121218);
-    final subtitleColor = isDark ? const Color(0xFF8B8B9E) : const Color(0xFF666666);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return PopScope(
       canPop: false,
@@ -166,21 +132,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            isEditMode ? 'Редактировать расход' : 'Новый расход',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            isEditMode ? AppStrings.tr('editExpense') : AppStrings.tr('addExpense'),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colorScheme.onPrimary),
           ),
           actions: [
-            // Кнопка "Удалить" — только в режиме редактирования
-            if (isEditMode)
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: _delete,
-              ),
-            // Кнопка "Сохранить"
-            TextButton(
-              onPressed: _save,
-              child: const Text('Сохранить', style: TextStyle(fontSize: 16)),
-            ),
+            if (isEditMode) IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _delete),
+            TextButton(onPressed: _save, child: Text(AppStrings.tr('save'), style: TextStyle(fontSize: 16, color: colorScheme.primary))),
           ],
         ),
         body: Form(
@@ -188,114 +145,94 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Поле "Название"
               Card(
-                color: surfaceColor,
+                color: colorScheme.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: TextFormField(
                     controller: _titleController,
-                    style: TextStyle(color: textColor),
+                    style: TextStyle(color: colorScheme.onSurface),
                     decoration: InputDecoration(
-                      labelText: 'Название',
-                      labelStyle: TextStyle(color: subtitleColor),
+                      labelText: AppStrings.tr('title'),
+                      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                       border: const UnderlineInputBorder(),
                       enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: subtitleColor.withOpacity(0.3)),
+                        borderSide: BorderSide(color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Введите название';
-                      }
-                      return null;
-                    },
+                    validator: (value) => (value == null || value.trim().isEmpty) ? AppStrings.tr('enterTitle') : null,
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Поле "Описание"
               Card(
-                color: surfaceColor,
+                color: colorScheme.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: TextFormField(
                     controller: _descriptionController,
-                    style: TextStyle(color: textColor),
+                    style: TextStyle(color: colorScheme.onSurface),
                     maxLines: 2,
                     decoration: InputDecoration(
-                      labelText: 'Описание',
-                      labelStyle: TextStyle(color: subtitleColor),
+                      labelText: AppStrings.tr('description'),
+                      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                       border: const UnderlineInputBorder(),
                       enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: subtitleColor.withOpacity(0.3)),
+                        borderSide: BorderSide(color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
                       ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Поле "Сумма"
               Card(
-                color: surfaceColor,
+                color: colorScheme.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: TextFormField(
                     controller: _amountController,
-                    style: TextStyle(color: textColor, fontSize: 20),
+                    style: TextStyle(color: colorScheme.onSurface, fontSize: 20),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
-                      labelText: 'Сумма',
-                      labelStyle: TextStyle(color: subtitleColor),
-                      suffixText: '₽',
-                      suffixStyle: TextStyle(color: subtitleColor),
+                      labelText: AppStrings.tr('amount'),
+                      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                      suffixText: AppStrings.getCurrencySymbol(),
+                      suffixStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                       border: const UnderlineInputBorder(),
                       enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: subtitleColor.withOpacity(0.3)),
+                        borderSide: BorderSide(color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Введите сумму';
-                      }
+                      if (value == null || value.trim().isEmpty) return AppStrings.tr('enterAmount');
                       final amount = double.tryParse(value.trim());
-                      if (amount == null || amount <= 0) {
-                        return 'Введите положительное число';
-                      }
+                      if (amount == null || amount <= 0) return AppStrings.tr('enterPositiveNumber');
+                      if (amount > 10000000) return AppStrings.tr('maxAmountExceeded');
                       return null;
                     },
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Поле "Дата"
               Card(
-                color: surfaceColor,
+                color: colorScheme.surface,
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text('Дата', style: TextStyle(color: subtitleColor, fontSize: 14)),
-                  subtitle: Text(
-                    DateFormat('dd.MM.yyyy').format(_selectedDate),
-                    style: TextStyle(color: textColor, fontSize: 18),
-                  ),
-                  trailing: Icon(Icons.calendar_today, color: subtitleColor),
+                  title: Text(AppStrings.tr('date'), style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14)),
+                  subtitle: Text(DateFormat('dd.MM.yyyy').format(_selectedDate), style: TextStyle(color: colorScheme.onSurface, fontSize: 18)),
+                  trailing: Icon(Icons.calendar_today, color: colorScheme.onSurfaceVariant),
                   onTap: _selectDate,
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Выбор категории
               Card(
-                color: surfaceColor,
+                color: colorScheme.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Категория', style: TextStyle(color: subtitleColor, fontSize: 14)),
+                      Text(AppStrings.tr('category'), style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14)),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
@@ -312,27 +249,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Color(category.colorValue)
-                                    : surfaceColor,
+                                color: isSelected ? Color(category.colorValue) : colorScheme.surface,
                                 border: Border.all(
-                                  color: isSelected
-                                      ? Color(category.colorValue)
-                                      : subtitleColor.withOpacity(0.3),
-                                  width: isSelected ? 2 : 1,
+                                    color: isSelected ? Color(category.colorValue) : colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                    width: isSelected ? 2 : 1
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(category.icon, size: 18, color: isSelected ? Colors.white : textColor),
+                                  Icon(category.icon, size: 18, color: isSelected ? Colors.white : colorScheme.onSurface),
                                   const SizedBox(width: 6),
                                   Text(
-                                    category.name,
+                                    AppStrings.translateCategory(category.name),
                                     style: TextStyle(
-                                      color: isSelected ? Colors.white : textColor,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? Colors.white : colorScheme.onSurface,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
                                     ),
                                   ),
                                 ],

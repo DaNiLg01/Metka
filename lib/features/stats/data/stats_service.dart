@@ -1,5 +1,5 @@
-import '../models/expense.dart';
-import '../models/category.dart';
+import '../../expenses/data/models/expense.dart';
+import '../../categories/data/category.dart';
 
 /// Модель для данных круговой диаграммы
 class CategoryStats {

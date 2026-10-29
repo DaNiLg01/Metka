@@ -15,14 +15,25 @@ dependencies:
   fl_chart: ^0.69.0
   csv: ^6.0.0
   path_provider: ^2.1.2
-  share_plus: ^9.0.0
+  share_plus: ^12.0.2 # ✅ ОБНОВЛЕНО для совместимости с Drift
   flutter_localizations:
     sdk: flutter
+  flutter_bloc: ^8.1.4
+  equatable: ^2.0.5
+
+  # ✅ НОВЫЕ: Drift (база данных SQLite)
+  drift: ^2.20.0
+  sqlite3_flutter_libs: ^0.5.24
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+
+  # ✅ НОВЫЕ: для генерации кода Drift
+  drift_dev: ^2.20.0
+  build_runner: ^2.4.11
 
 flutter:
   uses-material-design: true
