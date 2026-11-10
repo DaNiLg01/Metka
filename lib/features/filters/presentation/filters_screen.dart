@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../../core/localization/app_strings.dart';
-import '../../expenses/data/models/filter_criteria.dart';
+import '../../../../core/localization/app_strings.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../expenses/data/models/expense.dart';
+import '../../expenses/data/models/filter_criteria.dart';
+import '../../categories/data/category.dart';
+import '../../categories/data/category_service.dart';
 
 class FiltersScreen extends StatefulWidget {
   final FilterCriteria currentCriteria;
@@ -17,9 +19,11 @@ class _FiltersScreenState extends State<FiltersScreen> {
   late DateTime? _startDate;
   late DateTime? _endDate;
   late Set<ExpenseCategory> _selectedCategories;
-  late TextEditingController _minAmountController;
-  late TextEditingController _maxAmountController;
-  final _formKey = GlobalKey<FormState>();
+  late double? _minAmount;
+  late double? _maxAmount;
+  final TextEditingController _minController = TextEditingController();
+  final TextEditingController _maxController = TextEditingController();
+  List<Category> _categories = [];
 
   @override
   void initState() {
@@ -27,57 +31,119 @@ class _FiltersScreenState extends State<FiltersScreen> {
     _startDate = widget.currentCriteria.startDate;
     _endDate = widget.currentCriteria.endDate;
     _selectedCategories = Set.from(widget.currentCriteria.categories);
-    _minAmountController = TextEditingController(
-      text: widget.currentCriteria.minAmount?.toString() ?? '',
-    );
-    _maxAmountController = TextEditingController(
-      text: widget.currentCriteria.maxAmount?.toString() ?? '',
-    );
+    _minAmount = widget.currentCriteria.minAmount;
+    _maxAmount = widget.currentCriteria.maxAmount;
+    _minController.text = _minAmount?.toString() ?? '';
+    _maxController.text = _maxAmount?.toString() ?? '';
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await CategoryService.loadCategories();
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+        });
+      }
+    } catch (e) {
+      // Игнорируем ошибку загрузки категорий
+    }
   }
 
   @override
   void dispose() {
-    _minAmountController.dispose();
-    _maxAmountController.dispose();
+    _minController.dispose();
+    _maxController.dispose();
     super.dispose();
   }
 
   Future<void> _selectStartDate() async {
-    final date = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: _startDate ?? DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: _endDate ?? DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime.now(),
     );
-    if (date != null) {
-      setState(() { _startDate = date; });
+    if (picked != null) {
+      setState(() {
+        _startDate = picked;
+      });
     }
   }
 
   Future<void> _selectEndDate() async {
-    final date = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now(),
       firstDate: _startDate ?? DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime.now(),
     );
-    if (date != null) {
-      setState(() { _endDate = date; });
+    if (picked != null) {
+      setState(() {
+        _endDate = picked;
+      });
     }
   }
 
-  void _applyFilters() {
-    if (!_formKey.currentState!.validate()) return;
+  void _toggleCategory(ExpenseCategory category) {
+    setState(() {
+      if (_selectedCategories.contains(category)) {
+        _selectedCategories.remove(category);
+      } else {
+        _selectedCategories.add(category);
+      }
+    });
+  }
 
-    final minAmount = double.tryParse(_minAmountController.text.trim());
-    final maxAmount = double.tryParse(_maxAmountController.text.trim());
+  void _applyFilters() {
+    final minText = _minController.text.trim();
+    final maxText = _maxController.text.trim();
+
+    double? min;
+    double? max;
+
+    if (minText.isNotEmpty) {
+      min = double.tryParse(minText);
+    }
+    if (maxText.isNotEmpty) {
+      max = double.tryParse(maxText);
+    }
+
+    // ✅ Используем AppStrings.tr для сообщения об ошибке
+    if (min != null && max != null && min > max) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.tr('invalidAmountRange'),
+            style: const TextStyle(fontSize: 14),
+          ),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if ((min != null && min < 0) || (max != null && max < 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.tr('enterPositiveNumber')),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     final criteria = FilterCriteria(
       startDate: _startDate,
       endDate: _endDate,
       categories: _selectedCategories.toList(),
-      minAmount: minAmount,
-      maxAmount: maxAmount,
+      minAmount: min,
+      maxAmount: max,
     );
 
     Navigator.pop(context, criteria);
@@ -88,208 +154,219 @@ class _FiltersScreenState extends State<FiltersScreen> {
       _startDate = null;
       _endDate = null;
       _selectedCategories.clear();
-      _minAmountController.clear();
-      _maxAmountController.clear();
+      _minController.clear();
+      _maxController.clear();
+      _minAmount = null;
+      _maxAmount = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? const Color(0xFF1E1E2E) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF121218);
-    final subtitleColor = isDark ? const Color(0xFF8B8B9E) : const Color(0xFF666666);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppStrings.tr('filters'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton(onPressed: _resetFilters, child: Text(AppStrings.tr('reset'), style: const TextStyle(fontSize: 16))),
-        ],
+        title: Text(
+          AppStrings.tr('filters'),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          Expanded(
-            child: ListView(
+          // ===== ДАТЫ =====
+          Card(
+            color: colorScheme.surface,
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              children: [
-                Card(
-                  color: surfaceColor,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(AppStrings.tr('period'), style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: _DateButton(label: AppStrings.tr('from'), date: _startDate, onTap: _selectStartDate, textColor: textColor, subtitleColor: subtitleColor)),
-                            const SizedBox(width: 16),
-                            Expanded(child: _DateButton(label: AppStrings.tr('to'), date: _endDate, onTap: _selectEndDate, textColor: textColor, subtitleColor: subtitleColor)),
-                          ],
-                        ),
-                      ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.tr('dateRange'),
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  color: surfaceColor,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(AppStrings.tr('category'), style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8, runSpacing: 8,
-                          children: ExpenseCategory.values.map((category) {
-                            final isSelected = _selectedCategories.contains(category);
-                            return FilterChip(
-                              label: Text(AppStrings.translateCategory(category.name)),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedCategories.add(category);
-                                  } else {
-                                    _selectedCategories.remove(category);
-                                  }
-                                });
-                              },
-                              selectedColor: Color(category.colorValue).withOpacity(0.2),
-                              checkmarkColor: Color(category.colorValue),
-                              labelStyle: TextStyle(color: isSelected ? Color(category.colorValue) : textColor),
-                              side: BorderSide(color: isSelected ? Color(category.colorValue) : subtitleColor.withOpacity(0.3)),
-                            );
-                          }).toList(),
-                        ),
-                      ],
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      _startDate != null
+                          ? '${_startDate!.day}.${_startDate!.month}.${_startDate!.year}'
+                          : AppStrings.tr('startDate'),
+                      style: TextStyle(color: colorScheme.onSurface),
+                    ),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: _selectStartDate,
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      _endDate != null
+                          ? '${_endDate!.day}.${_endDate!.month}.${_endDate!.year}'
+                          : AppStrings.tr('endDate'),
+                      style: TextStyle(color: colorScheme.onSurface),
+                    ),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: _selectEndDate,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ===== СУММА =====
+          Card(
+            color: colorScheme.surface,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.tr('amount'),
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Form(
-                  key: _formKey,
-                  child: Card(
-                    color: surfaceColor,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(AppStrings.tr('amount'), style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 16),
-                          Row(
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _minController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      labelText: AppStrings.tr('sumFrom'),
+                      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                      border: const OutlineInputBorder(),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                      ),
+                      suffixText: AppStrings.getCurrencySymbol(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _maxController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      labelText: AppStrings.tr('sumTo'),
+                      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                      border: const OutlineInputBorder(),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                      ),
+                      suffixText: AppStrings.getCurrencySymbol(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ===== КАТЕГОРИИ =====
+          Card(
+            color: colorScheme.surface,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.tr('categories'),
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ExpenseCategory.values.map((category) {
+                      final isSelected = _selectedCategories.contains(category);
+                      return GestureDetector(
+                        onTap: () => _toggleCategory(category),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Color(category.colorValue) : colorScheme.surface,
+                            border: Border.all(
+                              color: isSelected ? Color(category.colorValue) : colorScheme.onSurfaceVariant.withOpacity(0.5),
+                              width: isSelected ? 2 : 1,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _minAmountController,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  style: TextStyle(color: textColor),
-                                  decoration: InputDecoration(
-                                    labelText: AppStrings.tr('minAmount'),
-                                    labelStyle: TextStyle(color: subtitleColor),
-                                    border: const UnderlineInputBorder(),
-                                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: subtitleColor.withOpacity(0.3))),
-                                  ),
-                                ),
+                              Icon(
+                                category.icon,
+                                size: 16,
+                                color: isSelected ? Colors.white : colorScheme.onSurface,
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _maxAmountController,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  style: TextStyle(color: textColor),
-                                  decoration: InputDecoration(
-                                    labelText: AppStrings.tr('maxAmount'),
-                                    labelStyle: TextStyle(color: subtitleColor),
-                                    border: const UnderlineInputBorder(),
-                                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: subtitleColor.withOpacity(0.3))),
-                                    errorText: _validateAmountRange(),
-                                    errorStyle: const TextStyle(color: Colors.red),
-                                  ),
+                              const SizedBox(width: 6),
+                              Text(
+                                AppStrings.translateCategory(category.name),
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : colorScheme.onSurface,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _applyFilters,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: const Color(0xFF3D5A80),
-                ),
-                child: Text(AppStrings.tr('apply'), style: const TextStyle(fontSize: 16)),
+                ],
               ),
             ),
           ),
+          const SizedBox(height: 24),
+
+          // ===== КНОПКИ =====
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _resetFilters,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(color: colorScheme.primary),
+                  ),
+                  child: Text(
+                    AppStrings.tr('reset'),
+                    style: TextStyle(color: colorScheme.primary, fontSize: 16),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _applyFilters,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: colorScheme.primary,
+                  ),
+                  child: Text(
+                    AppStrings.tr('apply'),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
-      ),
-    );
-  }
-
-  String? _validateAmountRange() {
-    final minText = _minAmountController.text.trim();
-    final maxText = _maxAmountController.text.trim();
-
-    if (minText.isEmpty || maxText.isEmpty) return null;
-
-    final min = double.tryParse(minText);
-    final max = double.tryParse(maxText);
-
-    if (min == null || max == null) return null;
-
-    if (min > max) {
-      return AppStrings.tr('invalidAmountRange');
-    }
-    return null;
-  }
-}
-
-class _DateButton extends StatelessWidget {
-  final String label;
-  final DateTime? date;
-  final VoidCallback onTap;
-  final Color textColor;
-  final Color subtitleColor;
-
-  const _DateButton({
-    required this.label,
-    required this.date,
-    required this.onTap,
-    required this.textColor,
-    required this.subtitleColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: subtitleColor),
-          border: const UnderlineInputBorder(),
-          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: subtitleColor.withOpacity(0.3))),
-        ),
-        child: Text(
-          date != null ? DateFormat('dd.MM.yyyy').format(date!) : AppStrings.tr('notSelected'),
-          style: TextStyle(color: date != null ? textColor : subtitleColor),
-        ),
       ),
     );
   }

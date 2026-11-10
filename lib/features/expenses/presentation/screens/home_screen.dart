@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/localization/app_strings.dart';
-import '../../../../core/theme/app_colors.dart'; // ✅ ДОБАВЛЕН ИМПОРТ AppColors
+import '../../../../core/theme/app_colors.dart';
 import '../../data/models/expense.dart';
 import '../../data/models/filter_criteria.dart';
 import '../../../export/presentation/export_screen.dart';
@@ -17,7 +17,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Предоставляем Cubit для этого экрана
     return BlocProvider(
       create: (context) => ExpenseCubit()..loadExpenses(),
       child: const _HomeScreenView(),
@@ -67,12 +66,8 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
         title: Text(AppStrings.tr('deleteExpense')),
         content: Text(AppStrings.tr('cannotUndo')),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(AppStrings.tr('cancel'))),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(AppStrings.tr('delete'))),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppStrings.tr('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(AppStrings.tr('delete'))),
         ],
       ),
     );
@@ -85,8 +80,7 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
   Future<void> _openFilters(BuildContext context) async {
     final result = await Navigator.push<FilterCriteria>(
       context,
-      MaterialPageRoute(
-          builder: (context) => FiltersScreen(currentCriteria: _filterCriteria)),
+      MaterialPageRoute(builder: (context) => FiltersScreen(currentCriteria: _filterCriteria)),
     );
 
     if (result != null && mounted) {
@@ -98,27 +92,22 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
 
   List<Expense> _getFilteredExpenses(List<Expense> expenses) {
     return expenses.where((e) {
+      // ✅ ИСПРАВЛЕНО C-03: Поиск по всем полям
       if (_searchQuery.isNotEmpty) {
-        final matchesSearch = e.title
-            .toLowerCase()
-            .contains(_searchQuery.toLowerCase()) ||
-            AppStrings.translateCategory(e.category.name)
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase());
+        final query = _searchQuery.toLowerCase();
+        final matchesSearch =
+            e.title.toLowerCase().contains(query) ||
+                e.description.toLowerCase().contains(query) ||  // Поиск по описанию
+                AppStrings.translateCategory(e.category.name).toLowerCase().contains(query) ||  // Поиск по категории
+                e.amount.toString().contains(query);  // Поиск по сумме
         if (!matchesSearch) return false;
       }
 
-      if (_filterCriteria.startDate != null &&
-          e.date.isBefore(_filterCriteria.startDate!)) return false;
-      if (_filterCriteria.endDate != null &&
-          e.date.isAfter(_filterCriteria.endDate!.add(const Duration(days: 1))))
-        return false;
-      if (_filterCriteria.categories.isNotEmpty &&
-          !_filterCriteria.categories.contains(e.category)) return false;
-      if (_filterCriteria.minAmount != null &&
-          e.amount < _filterCriteria.minAmount!) return false;
-      if (_filterCriteria.maxAmount != null &&
-          e.amount > _filterCriteria.maxAmount!) return false;
+      if (_filterCriteria.startDate != null && e.date.isBefore(_filterCriteria.startDate!)) return false;
+      if (_filterCriteria.endDate != null && e.date.isAfter(_filterCriteria.endDate!.add(const Duration(days: 1)))) return false;
+      if (_filterCriteria.categories.isNotEmpty && !_filterCriteria.categories.contains(e.category)) return false;
+      if (_filterCriteria.minAmount != null && e.amount < _filterCriteria.minAmount!) return false;
+      if (_filterCriteria.maxAmount != null && e.amount > _filterCriteria.maxAmount!) return false;
 
       return true;
     }).toList();
@@ -131,8 +120,7 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
     final yesterday = today.subtract(const Duration(days: 1));
 
     for (final expense in expenses) {
-      final expenseDate =
-      DateTime(expense.date.year, expense.date.month, expense.date.day);
+      final expenseDate = DateTime(expense.date.year, expense.date.month, expense.date.day);
       String key;
       if (expenseDate == today) {
         key = AppStrings.tr('today');
@@ -151,16 +139,11 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // ✅ ИСПОЛЬЗУЕМ AppColors ВМЕСТО ЖЕСТКО ЗАДАННЫХ ЦВЕТОВ
-    final subtitleColor = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
+    final subtitleColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppStrings.tr('homeScreen'),
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        title: Text(AppStrings.tr('homeScreen'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -175,15 +158,10 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
               );
             },
           ),
-          IconButton(
-              icon: const Icon(Icons.filter_list),
-              onPressed: () => _openFilters(context)),
+          IconButton(icon: const Icon(Icons.filter_list), onPressed: () => _openFilters(context)),
           IconButton(
             icon: const Icon(Icons.download),
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const ExportScreen())),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ExportScreen())),
           ),
         ],
       ),
@@ -191,7 +169,6 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
         onPressed: () => _openAddExpense(context),
         child: const Icon(Icons.add),
       ),
-      // ✅ СЛУШАЕМ СОСТОЯНИЕ ИЗ CUBIT
       body: BlocBuilder<ExpenseCubit, ExpenseState>(
         builder: (context, state) {
           if (state is ExpenseLoading) {
@@ -201,16 +178,12 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline,
-                      color: Colors.red, size: 48),
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
                   const SizedBox(height: 16),
-                  Text(state.message,
-                      style: TextStyle(color: subtitleColor),
-                      textAlign: TextAlign.center),
+                  Text(state.message, style: TextStyle(color: subtitleColor), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () =>
-                        context.read<ExpenseCubit>().loadExpenses(),
+                    onPressed: () => context.read<ExpenseCubit>().loadExpenses(),
                     child: const Text('Повторить'),
                   ),
                 ],
@@ -219,15 +192,12 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
           } else if (state is ExpenseLoaded) {
             final filteredExpenses = _getFilteredExpenses(state.expenses);
             final groupedExpenses = _groupExpensesByDate(filteredExpenses);
-            final totalAmount =
-            filteredExpenses.fold(0.0, (sum, e) => sum + e.amount);
+            final totalAmount = filteredExpenses.fold(0.0, (sum, e) => sum + e.amount);
 
             if (filteredExpenses.isEmpty) {
               return Center(
                 child: Text(
-                  _searchQuery.isNotEmpty
-                      ? AppStrings.tr('nothingFound')
-                      : AppStrings.tr('noExpenses'),
+                  _searchQuery.isNotEmpty ? AppStrings.tr('nothingFound') : AppStrings.tr('noExpenses'),
                   style: TextStyle(color: subtitleColor, fontSize: 16),
                 ),
               );
@@ -239,8 +209,7 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
                 SummaryCard(total: totalAmount),
                 const SizedBox(height: 16),
                 ...groupedExpenses.entries.map((entry) {
-                  final dayTotal =
-                  entry.value.fold(0.0, (sum, e) => sum + e.amount);
+                  final dayTotal = entry.value.fold(0.0, (sum, e) => sum + e.amount);
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -249,15 +218,8 @@ class __HomeScreenViewState extends State<_HomeScreenView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(entry.key,
-                                style: TextStyle(
-                                    color: subtitleColor,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500)),
-                            Text(
-                                '${dayTotal.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
-                                style: TextStyle(
-                                    color: subtitleColor, fontSize: 14)),
+                            Text(entry.key, style: TextStyle(color: subtitleColor, fontSize: 14, fontWeight: FontWeight.w500)),
+                            Text('${dayTotal.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}', style: TextStyle(color: subtitleColor, fontSize: 14)),
                           ],
                         ),
                       ),
@@ -288,12 +250,7 @@ class _ExpenseSearchDelegate extends SearchDelegate<String> {
 
   @override
   List<Widget> buildActions(BuildContext context) => [
-    IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-          onSearch('');
-        }),
+    IconButton(icon: const Icon(Icons.clear), onPressed: () { query = ''; onSearch(''); }),
   ];
 
   @override

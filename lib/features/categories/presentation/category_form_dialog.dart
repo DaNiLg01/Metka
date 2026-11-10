@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/localization/app_strings.dart';
+import '../../../../core/localization/app_strings.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../data/category.dart';
-import '../data/category_service.dart';
 
 class CategoryFormDialog extends StatefulWidget {
   final Category? category;
@@ -15,42 +15,25 @@ class CategoryFormDialog extends StatefulWidget {
 class _CategoryFormDialogState extends State<CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
-  late String _selectedIconCode;
+  late IconData _selectedIcon;
   late int _selectedColorValue;
-  List<Category> _existingCategories = [];
 
-  final List<Map<String, IconData>> _availableIcons = [
-    {'restaurant': Icons.restaurant},
-    {'directions_car': Icons.directions_car},
-    {'shopping_bag': Icons.shopping_bag},
-    {'movie': Icons.movie},
-    {'favorite': Icons.favorite},
-    {'more_horiz': Icons.more_horiz},
-    {'home': Icons.home},
-    {'work': Icons.work},
-    {'school': Icons.school},
-    {'fitness_center': Icons.fitness_center},
+  final List<IconData> _availableIcons = [
+    Icons.restaurant, Icons.directions_car, Icons.shopping_bag,
+    Icons.movie, Icons.favorite, Icons.more_horiz, Icons.shopping_cart, Icons.flight, Icons.home
   ];
 
   final List<int> _availableColors = [
     0xFF3D5A80, 0xFF4CAF50, 0xFF9C27B0, 0xFFFF5722,
-    0xFF00BCD4, 0xFF9E9E9E, 0xFFFFC107, 0xFFE91E63,
+    0xFF00BCD4, 0xFF9E9E9E, 0xFFE91E63, 0xFFFFC107
   ];
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.category?.name ?? '');
-    _selectedIconCode = widget.category?.iconCode ?? 'restaurant';
+    _selectedIcon = widget.category?.iconData ?? Icons.category;
     _selectedColorValue = widget.category?.colorValue ?? 0xFF3D5A80;
-    _loadExistingCategories();
-  }
-
-  Future<void> _loadExistingCategories() async {
-    final categories = await CategoryService.loadCategories();
-    setState(() {
-      _existingCategories = categories;
-    });
   }
 
   @override
@@ -59,115 +42,146 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     super.dispose();
   }
 
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Простое преобразование иконки в строку для сохранения
+    String iconCode = 'category';
+    if (_selectedIcon == Icons.restaurant) iconCode = 'restaurant';
+    else if (_selectedIcon == Icons.directions_car) iconCode = 'directions_car';
+    else if (_selectedIcon == Icons.shopping_bag) iconCode = 'shopping_bag';
+    else if (_selectedIcon == Icons.movie) iconCode = 'movie';
+    else if (_selectedIcon == Icons.favorite) iconCode = 'favorite';
+    else if (_selectedIcon == Icons.more_horiz) iconCode = 'more_horiz';
+    else if (_selectedIcon == Icons.shopping_cart) iconCode = 'shopping_cart';
+    else if (_selectedIcon == Icons.flight) iconCode = 'flight';
+    else if (_selectedIcon == Icons.home) iconCode = 'home';
+
+    final newCategory = Category(
+      id: widget.category?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      name: _nameController.text.trim(),
+      iconCode: iconCode,
+      colorValue: _selectedColorValue,
+    );
+
+    Navigator.pop(context, newCategory);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? const Color(0xFF1E1E2E) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF121218);
-    final subtitleColor = isDark ? const Color(0xFF8B8B9E) : const Color(0xFF666666);
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return AlertDialog(
-      backgroundColor: surfaceColor,
-      title: Text(
-        widget.category == null ? AppStrings.tr('newCategory') : AppStrings.tr('editCategory'),
-        style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold),
-      ),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: double.maxFinite,
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(AppStrings.tr('categoryName'), style: TextStyle(color: subtitleColor, fontSize: 14)),
-              const SizedBox(height: 8),
+              // Заголовок с гарантированной видимостью
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.category == null ? AppStrings.tr('newCategory') : AppStrings.tr('editCategory'),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textLight : Colors.black87, // ✅ Исправлено
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: isDark ? AppColors.textLight : Colors.black87),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
               TextFormField(
                 controller: _nameController,
-                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
-                  hintText: AppStrings.tr('categoryName'),
-                  hintStyle: TextStyle(color: subtitleColor),
-                  border: const UnderlineInputBorder(),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: subtitleColor.withOpacity(0.3))),
+                  labelText: AppStrings.tr('categoryName'),
+                  border: const OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return AppStrings.tr('enterTitle');
-                  }
-                  final name = value.trim();
-                  final isDuplicate = _existingCategories.any(
-                        (c) => c.name.toLowerCase() == name.toLowerCase() && c.id != widget.category?.id,
-                  );
-                  if (isDuplicate) {
-                    return AppStrings.tr('categoryAlreadyExists');
-                  }
-                  return null;
-                },
+                validator: (value) => (value == null || value.trim().isEmpty) ? AppStrings.tr('enterTitle') : null,
               ),
-              const SizedBox(height: 24),
-              Text(AppStrings.tr('icon'), style: TextStyle(color: subtitleColor, fontSize: 14)),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+
+              Text(AppStrings.tr('icon'), style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+              const SizedBox(height: 8),
               Wrap(
-                spacing: 8, runSpacing: 8,
-                children: _availableIcons.map((iconMap) {
-                  final iconKey = iconMap.keys.first;
-                  final iconData = iconMap.values.first;
-                  final isSelected = _selectedIconCode == iconKey;
+                spacing: 8,
+                runSpacing: 8,
+                children: _availableIcons.map((icon) {
+                  final isSelected = _selectedIcon == icon;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedIconCode = iconKey),
+                    onTap: () => setState(() => _selectedIcon = icon),
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isSelected ? Color(_selectedColorValue).withOpacity(0.2) : surfaceColor,
-                        border: Border.all(color: isSelected ? Color(_selectedColorValue) : subtitleColor.withOpacity(0.3), width: isSelected ? 2 : 1),
+                        color: isSelected ? Color(_selectedColorValue).withOpacity(0.2) : Colors.transparent,
+                        border: Border.all(color: isSelected ? Color(_selectedColorValue) : Colors.grey),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(iconData, color: isSelected ? Color(_selectedColorValue) : textColor, size: 24),
+                      child: Icon(icon, color: isSelected ? Color(_selectedColorValue) : colorScheme.onSurface),
                     ),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 24),
-              Text(AppStrings.tr('color'), style: TextStyle(color: subtitleColor, fontSize: 14)),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+
+              Text(AppStrings.tr('color'), style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+              const SizedBox(height: 8),
               Wrap(
-                spacing: 12, runSpacing: 12,
+                spacing: 8,
+                runSpacing: 8,
                 children: _availableColors.map((colorValue) {
                   final isSelected = _selectedColorValue == colorValue;
                   return GestureDetector(
                     onTap: () => setState(() => _selectedColorValue = colorValue),
                     child: Container(
-                      width: 40, height: 40,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: Color(colorValue), shape: BoxShape.circle,
-                        border: Border.all(color: isSelected ? Colors.white : Colors.transparent, width: isSelected ? 3 : 0),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))],
+                        color: Color(colorValue),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? Colors.white : Colors.transparent,
+                          width: 3,
+                        ),
+                        boxShadow: isSelected ? [const BoxShadow(color: Colors.black26, blurRadius: 4)] : null,
                       ),
                       child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
                     ),
                   );
                 }).toList(),
               ),
+              const SizedBox(height: 24),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(AppStrings.tr('cancel')),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _save,
+                    child: Text(AppStrings.tr('save')),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.tr('cancel'), style: TextStyle(color: subtitleColor))),
-        FilledButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              Navigator.pop(context, Category(
-                id: widget.category?.id,
-                name: _nameController.text.trim(),
-                iconCode: _selectedIconCode,
-                colorValue: _selectedColorValue,
-              ));
-            }
-          },
-          child: Text(AppStrings.tr('save')),
-        ),
-      ],
     );
   }
 }

@@ -3,272 +3,12 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
-class $CategoriesTable extends Categories
-    with TableInfo<$CategoriesTable, DriftCategory> {
+class $DriftExpensesTable extends DriftExpenses
+    with TableInfo<$DriftExpensesTable, DriftExpense> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CategoriesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
-  @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-      'name', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _iconCodeMeta =
-      const VerificationMeta('iconCode');
-  @override
-  late final GeneratedColumn<String> iconCode = GeneratedColumn<String>(
-      'icon_code', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _colorValueMeta =
-      const VerificationMeta('colorValue');
-  @override
-  late final GeneratedColumn<int> colorValue = GeneratedColumn<int>(
-      'color_value', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
-  @override
-  List<GeneratedColumn> get $columns => [id, name, iconCode, colorValue];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'categories';
-  @override
-  VerificationContext validateIntegrity(Insertable<DriftCategory> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('name')) {
-      context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
-    } else if (isInserting) {
-      context.missing(_nameMeta);
-    }
-    if (data.containsKey('icon_code')) {
-      context.handle(_iconCodeMeta,
-          iconCode.isAcceptableOrUnknown(data['icon_code']!, _iconCodeMeta));
-    } else if (isInserting) {
-      context.missing(_iconCodeMeta);
-    }
-    if (data.containsKey('color_value')) {
-      context.handle(
-          _colorValueMeta,
-          colorValue.isAcceptableOrUnknown(
-              data['color_value']!, _colorValueMeta));
-    } else if (isInserting) {
-      context.missing(_colorValueMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  DriftCategory map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return DriftCategory(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      name: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
-      iconCode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}icon_code'])!,
-      colorValue: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}color_value'])!,
-    );
-  }
-
-  @override
-  $CategoriesTable createAlias(String alias) {
-    return $CategoriesTable(attachedDatabase, alias);
-  }
-}
-
-class DriftCategory extends DataClass implements Insertable<DriftCategory> {
-  final int id;
-  final String name;
-  final String iconCode;
-  final int colorValue;
-  const DriftCategory(
-      {required this.id,
-      required this.name,
-      required this.iconCode,
-      required this.colorValue});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['name'] = Variable<String>(name);
-    map['icon_code'] = Variable<String>(iconCode);
-    map['color_value'] = Variable<int>(colorValue);
-    return map;
-  }
-
-  CategoriesCompanion toCompanion(bool nullToAbsent) {
-    return CategoriesCompanion(
-      id: Value(id),
-      name: Value(name),
-      iconCode: Value(iconCode),
-      colorValue: Value(colorValue),
-    );
-  }
-
-  factory DriftCategory.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return DriftCategory(
-      id: serializer.fromJson<int>(json['id']),
-      name: serializer.fromJson<String>(json['name']),
-      iconCode: serializer.fromJson<String>(json['iconCode']),
-      colorValue: serializer.fromJson<int>(json['colorValue']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'name': serializer.toJson<String>(name),
-      'iconCode': serializer.toJson<String>(iconCode),
-      'colorValue': serializer.toJson<int>(colorValue),
-    };
-  }
-
-  DriftCategory copyWith(
-          {int? id, String? name, String? iconCode, int? colorValue}) =>
-      DriftCategory(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        iconCode: iconCode ?? this.iconCode,
-        colorValue: colorValue ?? this.colorValue,
-      );
-  DriftCategory copyWithCompanion(CategoriesCompanion data) {
-    return DriftCategory(
-      id: data.id.present ? data.id.value : this.id,
-      name: data.name.present ? data.name.value : this.name,
-      iconCode: data.iconCode.present ? data.iconCode.value : this.iconCode,
-      colorValue:
-          data.colorValue.present ? data.colorValue.value : this.colorValue,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('DriftCategory(')
-          ..write('id: $id, ')
-          ..write('name: $name, ')
-          ..write('iconCode: $iconCode, ')
-          ..write('colorValue: $colorValue')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, name, iconCode, colorValue);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is DriftCategory &&
-          other.id == this.id &&
-          other.name == this.name &&
-          other.iconCode == this.iconCode &&
-          other.colorValue == this.colorValue);
-}
-
-class CategoriesCompanion extends UpdateCompanion<DriftCategory> {
-  final Value<int> id;
-  final Value<String> name;
-  final Value<String> iconCode;
-  final Value<int> colorValue;
-  const CategoriesCompanion({
-    this.id = const Value.absent(),
-    this.name = const Value.absent(),
-    this.iconCode = const Value.absent(),
-    this.colorValue = const Value.absent(),
-  });
-  CategoriesCompanion.insert({
-    this.id = const Value.absent(),
-    required String name,
-    required String iconCode,
-    required int colorValue,
-  })  : name = Value(name),
-        iconCode = Value(iconCode),
-        colorValue = Value(colorValue);
-  static Insertable<DriftCategory> custom({
-    Expression<int>? id,
-    Expression<String>? name,
-    Expression<String>? iconCode,
-    Expression<int>? colorValue,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (name != null) 'name': name,
-      if (iconCode != null) 'icon_code': iconCode,
-      if (colorValue != null) 'color_value': colorValue,
-    });
-  }
-
-  CategoriesCompanion copyWith(
-      {Value<int>? id,
-      Value<String>? name,
-      Value<String>? iconCode,
-      Value<int>? colorValue}) {
-    return CategoriesCompanion(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      iconCode: iconCode ?? this.iconCode,
-      colorValue: colorValue ?? this.colorValue,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
-    }
-    if (iconCode.present) {
-      map['icon_code'] = Variable<String>(iconCode.value);
-    }
-    if (colorValue.present) {
-      map['color_value'] = Variable<int>(colorValue.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('CategoriesCompanion(')
-          ..write('id: $id, ')
-          ..write('name: $name, ')
-          ..write('iconCode: $iconCode, ')
-          ..write('colorValue: $colorValue')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $ExpensesTable extends Expenses
-    with TableInfo<$ExpensesTable, DriftExpense> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $ExpensesTable(this.attachedDatabase, [this._alias]);
+  $DriftExpensesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -310,7 +50,7 @@ class $ExpensesTable extends Expenses
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'expenses';
+  static const String $name = 'drift_expenses';
   @override
   VerificationContext validateIntegrity(Insertable<DriftExpense> instance,
       {bool isInserting = false}) {
@@ -357,7 +97,7 @@ class $ExpensesTable extends Expenses
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   DriftExpense map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -378,8 +118,8 @@ class $ExpensesTable extends Expenses
   }
 
   @override
-  $ExpensesTable createAlias(String alias) {
-    return $ExpensesTable(attachedDatabase, alias);
+  $DriftExpensesTable createAlias(String alias) {
+    return $DriftExpensesTable(attachedDatabase, alias);
   }
 }
 
@@ -409,8 +149,8 @@ class DriftExpense extends DataClass implements Insertable<DriftExpense> {
     return map;
   }
 
-  ExpensesCompanion toCompanion(bool nullToAbsent) {
-    return ExpensesCompanion(
+  DriftExpensesCompanion toCompanion(bool nullToAbsent) {
+    return DriftExpensesCompanion(
       id: Value(id),
       title: Value(title),
       description: Value(description),
@@ -460,7 +200,7 @@ class DriftExpense extends DataClass implements Insertable<DriftExpense> {
         categoryName: categoryName ?? this.categoryName,
         date: date ?? this.date,
       );
-  DriftExpense copyWithCompanion(ExpensesCompanion data) {
+  DriftExpense copyWithCompanion(DriftExpensesCompanion data) {
     return DriftExpense(
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
@@ -502,7 +242,7 @@ class DriftExpense extends DataClass implements Insertable<DriftExpense> {
           other.date == this.date);
 }
 
-class ExpensesCompanion extends UpdateCompanion<DriftExpense> {
+class DriftExpensesCompanion extends UpdateCompanion<DriftExpense> {
   final Value<String> id;
   final Value<String> title;
   final Value<String> description;
@@ -510,7 +250,7 @@ class ExpensesCompanion extends UpdateCompanion<DriftExpense> {
   final Value<String> categoryName;
   final Value<DateTime> date;
   final Value<int> rowid;
-  const ExpensesCompanion({
+  const DriftExpensesCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
@@ -519,7 +259,7 @@ class ExpensesCompanion extends UpdateCompanion<DriftExpense> {
     this.date = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  ExpensesCompanion.insert({
+  DriftExpensesCompanion.insert({
     required String id,
     required String title,
     this.description = const Value.absent(),
@@ -552,7 +292,7 @@ class ExpensesCompanion extends UpdateCompanion<DriftExpense> {
     });
   }
 
-  ExpensesCompanion copyWith(
+  DriftExpensesCompanion copyWith(
       {Value<String>? id,
       Value<String>? title,
       Value<String>? description,
@@ -560,7 +300,7 @@ class ExpensesCompanion extends UpdateCompanion<DriftExpense> {
       Value<String>? categoryName,
       Value<DateTime>? date,
       Value<int>? rowid}) {
-    return ExpensesCompanion(
+    return DriftExpensesCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -600,7 +340,7 @@ class ExpensesCompanion extends UpdateCompanion<DriftExpense> {
 
   @override
   String toString() {
-    return (StringBuffer('ExpensesCompanion(')
+    return (StringBuffer('DriftExpensesCompanion(')
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
@@ -613,169 +353,282 @@ class ExpensesCompanion extends UpdateCompanion<DriftExpense> {
   }
 }
 
+class $DriftCategoriesTable extends DriftCategories
+    with TableInfo<$DriftCategoriesTable, DriftCategory> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DriftCategoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _iconCodeMeta =
+      const VerificationMeta('iconCode');
+  @override
+  late final GeneratedColumn<String> iconCode = GeneratedColumn<String>(
+      'icon_code', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _colorValueMeta =
+      const VerificationMeta('colorValue');
+  @override
+  late final GeneratedColumn<int> colorValue = GeneratedColumn<int>(
+      'color_value', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, name, iconCode, colorValue];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'drift_categories';
+  @override
+  VerificationContext validateIntegrity(Insertable<DriftCategory> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon_code')) {
+      context.handle(_iconCodeMeta,
+          iconCode.isAcceptableOrUnknown(data['icon_code']!, _iconCodeMeta));
+    } else if (isInserting) {
+      context.missing(_iconCodeMeta);
+    }
+    if (data.containsKey('color_value')) {
+      context.handle(
+          _colorValueMeta,
+          colorValue.isAcceptableOrUnknown(
+              data['color_value']!, _colorValueMeta));
+    } else if (isInserting) {
+      context.missing(_colorValueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DriftCategory map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DriftCategory(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      iconCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}icon_code'])!,
+      colorValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}color_value'])!,
+    );
+  }
+
+  @override
+  $DriftCategoriesTable createAlias(String alias) {
+    return $DriftCategoriesTable(attachedDatabase, alias);
+  }
+}
+
+class DriftCategory extends DataClass implements Insertable<DriftCategory> {
+  final int id;
+  final String name;
+  final String iconCode;
+  final int colorValue;
+  const DriftCategory(
+      {required this.id,
+      required this.name,
+      required this.iconCode,
+      required this.colorValue});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['icon_code'] = Variable<String>(iconCode);
+    map['color_value'] = Variable<int>(colorValue);
+    return map;
+  }
+
+  DriftCategoriesCompanion toCompanion(bool nullToAbsent) {
+    return DriftCategoriesCompanion(
+      id: Value(id),
+      name: Value(name),
+      iconCode: Value(iconCode),
+      colorValue: Value(colorValue),
+    );
+  }
+
+  factory DriftCategory.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DriftCategory(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      iconCode: serializer.fromJson<String>(json['iconCode']),
+      colorValue: serializer.fromJson<int>(json['colorValue']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'iconCode': serializer.toJson<String>(iconCode),
+      'colorValue': serializer.toJson<int>(colorValue),
+    };
+  }
+
+  DriftCategory copyWith(
+          {int? id, String? name, String? iconCode, int? colorValue}) =>
+      DriftCategory(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        iconCode: iconCode ?? this.iconCode,
+        colorValue: colorValue ?? this.colorValue,
+      );
+  DriftCategory copyWithCompanion(DriftCategoriesCompanion data) {
+    return DriftCategory(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      iconCode: data.iconCode.present ? data.iconCode.value : this.iconCode,
+      colorValue:
+          data.colorValue.present ? data.colorValue.value : this.colorValue,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DriftCategory(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('iconCode: $iconCode, ')
+          ..write('colorValue: $colorValue')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, iconCode, colorValue);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DriftCategory &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.iconCode == this.iconCode &&
+          other.colorValue == this.colorValue);
+}
+
+class DriftCategoriesCompanion extends UpdateCompanion<DriftCategory> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> iconCode;
+  final Value<int> colorValue;
+  const DriftCategoriesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.iconCode = const Value.absent(),
+    this.colorValue = const Value.absent(),
+  });
+  DriftCategoriesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String iconCode,
+    required int colorValue,
+  })  : name = Value(name),
+        iconCode = Value(iconCode),
+        colorValue = Value(colorValue);
+  static Insertable<DriftCategory> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? iconCode,
+    Expression<int>? colorValue,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (iconCode != null) 'icon_code': iconCode,
+      if (colorValue != null) 'color_value': colorValue,
+    });
+  }
+
+  DriftCategoriesCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? name,
+      Value<String>? iconCode,
+      Value<int>? colorValue}) {
+    return DriftCategoriesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      iconCode: iconCode ?? this.iconCode,
+      colorValue: colorValue ?? this.colorValue,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (iconCode.present) {
+      map['icon_code'] = Variable<String>(iconCode.value);
+    }
+    if (colorValue.present) {
+      map['color_value'] = Variable<int>(colorValue.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DriftCategoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('iconCode: $iconCode, ')
+          ..write('colorValue: $colorValue')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
-  late final $CategoriesTable categories = $CategoriesTable(this);
-  late final $ExpensesTable expenses = $ExpensesTable(this);
+  late final $DriftExpensesTable driftExpenses = $DriftExpensesTable(this);
+  late final $DriftCategoriesTable driftCategories =
+      $DriftCategoriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [categories, expenses];
+  List<DatabaseSchemaEntity> get allSchemaEntities =>
+      [driftExpenses, driftCategories];
 }
 
-typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
-  Value<int> id,
-  required String name,
-  required String iconCode,
-  required int colorValue,
-});
-typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
-  Value<int> id,
-  Value<String> name,
-  Value<String> iconCode,
-  Value<int> colorValue,
-});
-
-class $$CategoriesTableFilterComposer
-    extends Composer<_$AppDatabase, $CategoriesTable> {
-  $$CategoriesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get iconCode => $composableBuilder(
-      column: $table.iconCode, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get colorValue => $composableBuilder(
-      column: $table.colorValue, builder: (column) => ColumnFilters(column));
-}
-
-class $$CategoriesTableOrderingComposer
-    extends Composer<_$AppDatabase, $CategoriesTable> {
-  $$CategoriesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get iconCode => $composableBuilder(
-      column: $table.iconCode, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get colorValue => $composableBuilder(
-      column: $table.colorValue, builder: (column) => ColumnOrderings(column));
-}
-
-class $$CategoriesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $CategoriesTable> {
-  $$CategoriesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<String> get iconCode =>
-      $composableBuilder(column: $table.iconCode, builder: (column) => column);
-
-  GeneratedColumn<int> get colorValue => $composableBuilder(
-      column: $table.colorValue, builder: (column) => column);
-}
-
-class $$CategoriesTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $CategoriesTable,
-    DriftCategory,
-    $$CategoriesTableFilterComposer,
-    $$CategoriesTableOrderingComposer,
-    $$CategoriesTableAnnotationComposer,
-    $$CategoriesTableCreateCompanionBuilder,
-    $$CategoriesTableUpdateCompanionBuilder,
-    (
-      DriftCategory,
-      BaseReferences<_$AppDatabase, $CategoriesTable, DriftCategory>
-    ),
-    DriftCategory,
-    PrefetchHooks Function()> {
-  $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$CategoriesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$CategoriesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$CategoriesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<String> name = const Value.absent(),
-            Value<String> iconCode = const Value.absent(),
-            Value<int> colorValue = const Value.absent(),
-          }) =>
-              CategoriesCompanion(
-            id: id,
-            name: name,
-            iconCode: iconCode,
-            colorValue: colorValue,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required String name,
-            required String iconCode,
-            required int colorValue,
-          }) =>
-              CategoriesCompanion.insert(
-            id: id,
-            name: name,
-            iconCode: iconCode,
-            colorValue: colorValue,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ));
-}
-
-typedef $$CategoriesTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $CategoriesTable,
-    DriftCategory,
-    $$CategoriesTableFilterComposer,
-    $$CategoriesTableOrderingComposer,
-    $$CategoriesTableAnnotationComposer,
-    $$CategoriesTableCreateCompanionBuilder,
-    $$CategoriesTableUpdateCompanionBuilder,
-    (
-      DriftCategory,
-      BaseReferences<_$AppDatabase, $CategoriesTable, DriftCategory>
-    ),
-    DriftCategory,
-    PrefetchHooks Function()>;
-typedef $$ExpensesTableCreateCompanionBuilder = ExpensesCompanion Function({
+typedef $$DriftExpensesTableCreateCompanionBuilder = DriftExpensesCompanion
+    Function({
   required String id,
   required String title,
   Value<String> description,
@@ -784,7 +637,8 @@ typedef $$ExpensesTableCreateCompanionBuilder = ExpensesCompanion Function({
   required DateTime date,
   Value<int> rowid,
 });
-typedef $$ExpensesTableUpdateCompanionBuilder = ExpensesCompanion Function({
+typedef $$DriftExpensesTableUpdateCompanionBuilder = DriftExpensesCompanion
+    Function({
   Value<String> id,
   Value<String> title,
   Value<String> description,
@@ -794,9 +648,9 @@ typedef $$ExpensesTableUpdateCompanionBuilder = ExpensesCompanion Function({
   Value<int> rowid,
 });
 
-class $$ExpensesTableFilterComposer
-    extends Composer<_$AppDatabase, $ExpensesTable> {
-  $$ExpensesTableFilterComposer({
+class $$DriftExpensesTableFilterComposer
+    extends Composer<_$AppDatabase, $DriftExpensesTable> {
+  $$DriftExpensesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -822,9 +676,9 @@ class $$ExpensesTableFilterComposer
       column: $table.date, builder: (column) => ColumnFilters(column));
 }
 
-class $$ExpensesTableOrderingComposer
-    extends Composer<_$AppDatabase, $ExpensesTable> {
-  $$ExpensesTableOrderingComposer({
+class $$DriftExpensesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DriftExpensesTable> {
+  $$DriftExpensesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -851,9 +705,9 @@ class $$ExpensesTableOrderingComposer
       column: $table.date, builder: (column) => ColumnOrderings(column));
 }
 
-class $$ExpensesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ExpensesTable> {
-  $$ExpensesTableAnnotationComposer({
+class $$DriftExpensesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DriftExpensesTable> {
+  $$DriftExpensesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -879,28 +733,31 @@ class $$ExpensesTableAnnotationComposer
       $composableBuilder(column: $table.date, builder: (column) => column);
 }
 
-class $$ExpensesTableTableManager extends RootTableManager<
+class $$DriftExpensesTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $ExpensesTable,
+    $DriftExpensesTable,
     DriftExpense,
-    $$ExpensesTableFilterComposer,
-    $$ExpensesTableOrderingComposer,
-    $$ExpensesTableAnnotationComposer,
-    $$ExpensesTableCreateCompanionBuilder,
-    $$ExpensesTableUpdateCompanionBuilder,
-    (DriftExpense, BaseReferences<_$AppDatabase, $ExpensesTable, DriftExpense>),
+    $$DriftExpensesTableFilterComposer,
+    $$DriftExpensesTableOrderingComposer,
+    $$DriftExpensesTableAnnotationComposer,
+    $$DriftExpensesTableCreateCompanionBuilder,
+    $$DriftExpensesTableUpdateCompanionBuilder,
+    (
+      DriftExpense,
+      BaseReferences<_$AppDatabase, $DriftExpensesTable, DriftExpense>
+    ),
     DriftExpense,
     PrefetchHooks Function()> {
-  $$ExpensesTableTableManager(_$AppDatabase db, $ExpensesTable table)
+  $$DriftExpensesTableTableManager(_$AppDatabase db, $DriftExpensesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$ExpensesTableFilterComposer($db: db, $table: table),
+              $$DriftExpensesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$ExpensesTableOrderingComposer($db: db, $table: table),
+              $$DriftExpensesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$ExpensesTableAnnotationComposer($db: db, $table: table),
+              $$DriftExpensesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> title = const Value.absent(),
@@ -910,7 +767,7 @@ class $$ExpensesTableTableManager extends RootTableManager<
             Value<DateTime> date = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              ExpensesCompanion(
+              DriftExpensesCompanion(
             id: id,
             title: title,
             description: description,
@@ -928,7 +785,7 @@ class $$ExpensesTableTableManager extends RootTableManager<
             required DateTime date,
             Value<int> rowid = const Value.absent(),
           }) =>
-              ExpensesCompanion.insert(
+              DriftExpensesCompanion.insert(
             id: id,
             title: title,
             description: description,
@@ -944,24 +801,180 @@ class $$ExpensesTableTableManager extends RootTableManager<
         ));
 }
 
-typedef $$ExpensesTableProcessedTableManager = ProcessedTableManager<
+typedef $$DriftExpensesTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $ExpensesTable,
+    $DriftExpensesTable,
     DriftExpense,
-    $$ExpensesTableFilterComposer,
-    $$ExpensesTableOrderingComposer,
-    $$ExpensesTableAnnotationComposer,
-    $$ExpensesTableCreateCompanionBuilder,
-    $$ExpensesTableUpdateCompanionBuilder,
-    (DriftExpense, BaseReferences<_$AppDatabase, $ExpensesTable, DriftExpense>),
+    $$DriftExpensesTableFilterComposer,
+    $$DriftExpensesTableOrderingComposer,
+    $$DriftExpensesTableAnnotationComposer,
+    $$DriftExpensesTableCreateCompanionBuilder,
+    $$DriftExpensesTableUpdateCompanionBuilder,
+    (
+      DriftExpense,
+      BaseReferences<_$AppDatabase, $DriftExpensesTable, DriftExpense>
+    ),
     DriftExpense,
+    PrefetchHooks Function()>;
+typedef $$DriftCategoriesTableCreateCompanionBuilder = DriftCategoriesCompanion
+    Function({
+  Value<int> id,
+  required String name,
+  required String iconCode,
+  required int colorValue,
+});
+typedef $$DriftCategoriesTableUpdateCompanionBuilder = DriftCategoriesCompanion
+    Function({
+  Value<int> id,
+  Value<String> name,
+  Value<String> iconCode,
+  Value<int> colorValue,
+});
+
+class $$DriftCategoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $DriftCategoriesTable> {
+  $$DriftCategoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get iconCode => $composableBuilder(
+      column: $table.iconCode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get colorValue => $composableBuilder(
+      column: $table.colorValue, builder: (column) => ColumnFilters(column));
+}
+
+class $$DriftCategoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DriftCategoriesTable> {
+  $$DriftCategoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get iconCode => $composableBuilder(
+      column: $table.iconCode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get colorValue => $composableBuilder(
+      column: $table.colorValue, builder: (column) => ColumnOrderings(column));
+}
+
+class $$DriftCategoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DriftCategoriesTable> {
+  $$DriftCategoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get iconCode =>
+      $composableBuilder(column: $table.iconCode, builder: (column) => column);
+
+  GeneratedColumn<int> get colorValue => $composableBuilder(
+      column: $table.colorValue, builder: (column) => column);
+}
+
+class $$DriftCategoriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $DriftCategoriesTable,
+    DriftCategory,
+    $$DriftCategoriesTableFilterComposer,
+    $$DriftCategoriesTableOrderingComposer,
+    $$DriftCategoriesTableAnnotationComposer,
+    $$DriftCategoriesTableCreateCompanionBuilder,
+    $$DriftCategoriesTableUpdateCompanionBuilder,
+    (
+      DriftCategory,
+      BaseReferences<_$AppDatabase, $DriftCategoriesTable, DriftCategory>
+    ),
+    DriftCategory,
+    PrefetchHooks Function()> {
+  $$DriftCategoriesTableTableManager(
+      _$AppDatabase db, $DriftCategoriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DriftCategoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DriftCategoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DriftCategoriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> iconCode = const Value.absent(),
+            Value<int> colorValue = const Value.absent(),
+          }) =>
+              DriftCategoriesCompanion(
+            id: id,
+            name: name,
+            iconCode: iconCode,
+            colorValue: colorValue,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String name,
+            required String iconCode,
+            required int colorValue,
+          }) =>
+              DriftCategoriesCompanion.insert(
+            id: id,
+            name: name,
+            iconCode: iconCode,
+            colorValue: colorValue,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$DriftCategoriesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $DriftCategoriesTable,
+    DriftCategory,
+    $$DriftCategoriesTableFilterComposer,
+    $$DriftCategoriesTableOrderingComposer,
+    $$DriftCategoriesTableAnnotationComposer,
+    $$DriftCategoriesTableCreateCompanionBuilder,
+    $$DriftCategoriesTableUpdateCompanionBuilder,
+    (
+      DriftCategory,
+      BaseReferences<_$AppDatabase, $DriftCategoriesTable, DriftCategory>
+    ),
+    DriftCategory,
     PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$CategoriesTableTableManager get categories =>
-      $$CategoriesTableTableManager(_db, _db.categories);
-  $$ExpensesTableTableManager get expenses =>
-      $$ExpensesTableTableManager(_db, _db.expenses);
+  $$DriftExpensesTableTableManager get driftExpenses =>
+      $$DriftExpensesTableTableManager(_db, _db.driftExpenses);
+  $$DriftCategoriesTableTableManager get driftCategories =>
+      $$DriftCategoriesTableTableManager(_db, _db.driftCategories);
 }

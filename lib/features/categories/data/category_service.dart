@@ -10,71 +10,57 @@ class CategoryService {
     _db = database;
   }
 
-  /// Загружает все категории из базы данных
   static Future<List<Category>> loadCategories() async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-
-      final driftCategories = await _db!.select(_db!.categories).get();
-
-      // Если база пустая, инициализируем стандартные категории
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      final driftCategories = await _db!.select(_db!.driftCategories).get();
       if (driftCategories.isEmpty) {
         await _initializeDefaultCategories();
-        return loadCategories(); // Рекурсивно загружаем уже созданные
+        return loadCategories();
       }
-
       return driftCategories.map(_driftToCategory).toList();
     } catch (e) {
       throw DatabaseException('Не удалось загрузить категории: $e');
     }
   }
 
-  /// Добавляет новую категорию
   static Future<void> addCategory(Category category) async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-      await _db!.into(_db!.categories).insert(_categoryToDrift(category));
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      await _db!.into(_db!.driftCategories).insert(_categoryToDriftInsert(category));
     } catch (e) {
       throw DatabaseException('Не удалось добавить категорию: $e');
     }
   }
 
-  /// Обновляет существующую категорию
   static Future<void> updateCategory(Category category) async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-      await _db!.update(_db!.categories).replace(_categoryToDrift(category));
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      final intId = int.tryParse(category.id) ?? 0;
+      await (_db!.update(_db!.driftCategories)..where((tbl) => tbl.id.equals(intId)))
+          .write(DriftCategoriesCompanion(
+        name: Value(category.name),
+        iconCode: Value(category.iconCode),
+        colorValue: Value(category.colorValue),
+      ));
     } catch (e) {
       throw DatabaseException('Не удалось обновить категорию: $e');
     }
   }
 
-  /// Удаляет категорию по ID
   static Future<void> deleteCategory(String id) async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
       final intId = int.tryParse(id) ?? 0;
-      await (_db!.delete(_db!.categories)..where((tbl) => tbl.id.equals(intId))).go();
+      await (_db!.delete(_db!.driftCategories)..where((tbl) => tbl.id.equals(intId))).go();
     } catch (e) {
       throw DatabaseException('Не удалось удалить категорию: $e');
     }
   }
 
-  /// Инициализация стандартных категорий при первом запуске
   static Future<void> _initializeDefaultCategories() async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
       final defaults = [
         Category(name: 'Еда', iconCode: 'restaurant', colorValue: 0xFF3D5A80),
         Category(name: 'Транспорт', iconCode: 'directions_car', colorValue: 0xFF4CAF50),
@@ -83,16 +69,13 @@ class CategoryService {
         Category(name: 'Здоровье', iconCode: 'favorite', colorValue: 0xFF00BCD4),
         Category(name: 'Другое', iconCode: 'more_horiz', colorValue: 0xFF9E9E9E),
       ];
-
       for (final cat in defaults) {
-        await _db!.into(_db!.categories).insert(_categoryToDrift(cat));
+        await _db!.into(_db!.driftCategories).insert(_categoryToDriftInsert(cat));
       }
     } catch (e) {
       throw DatabaseException('Не удалось инициализировать категории: $e');
     }
   }
-
-  // ===== МАППИНГ =====
 
   static Category _driftToCategory(DriftCategory data) {
     return Category(
@@ -103,8 +86,8 @@ class CategoryService {
     );
   }
 
-  static CategoriesCompanion _categoryToDrift(Category category) {
-    return CategoriesCompanion.insert(
+  static DriftCategoriesCompanion _categoryToDriftInsert(Category category) {
+    return DriftCategoriesCompanion.insert(
       name: category.name,
       iconCode: category.iconCode,
       colorValue: category.colorValue,

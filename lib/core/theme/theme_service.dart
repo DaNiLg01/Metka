@@ -1,16 +1,26 @@
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeService {
-  static const String _key = 'is_dark_theme';
+  static const String _themeKey = 'isDarkTheme';
 
-  static Future<bool> isDarkTheme() async {
+  // ✅ Возвращает bool? (null = системная тема)
+  static Future<bool?> isDarkTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_key) ?? true; // по умолчанию тёмная
+    // Если ключа нет — возвращаем null (системная)
+    if (!prefs.containsKey(_themeKey)) {
+      return null;
+    }
+    return prefs.getBool(_themeKey);
   }
 
-  static Future<void> setDarkTheme(bool isDark) async {
+  // ✅ Принимает bool? (null = системная)
+  static Future<void> setDarkTheme(bool? isDark) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_key, isDark);
+    if (isDark == null) {
+      // Удаляем ключ — будет системная тема
+      await prefs.remove(_themeKey);
+    } else {
+      await prefs.setBool(_themeKey, isDark);
+    }
   }
 }

@@ -10,31 +10,23 @@ class StorageService {
     _db = database;
   }
 
-  /// Загружает все расходы из базы данных
   static Future<List<Expense>> loadExpenses() async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-
-      final driftExpenses = await _db!.select(_db!.expenses).get();
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      final driftExpenses = await _db!.select(_db!.driftExpenses).get();
       return driftExpenses.map(_driftToExpense).toList();
     } catch (e) {
       throw DatabaseException('Не удалось загрузить расходы: $e');
     }
   }
 
-  /// Сохраняет список расходов (используется для массовой перезаписи)
   static Future<void> saveExpenses(List<Expense> expenses) async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
       await _db!.transaction(() async {
-        await _db!.delete(_db!.expenses).go();
+        await _db!.delete(_db!.driftExpenses).go();
         for (final expense in expenses) {
-          await _db!.into(_db!.expenses).insert(_expenseToDrift(expense));
+          await _db!.into(_db!.driftExpenses).insert(_expenseToDrift(expense));
         }
       });
     } catch (e) {
@@ -42,43 +34,55 @@ class StorageService {
     }
   }
 
-  /// Добавляет один расход
   static Future<void> addExpense(Expense expense) async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-      await _db!.into(_db!.expenses).insert(_expenseToDrift(expense));
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      await _db!.into(_db!.driftExpenses).insert(_expenseToDrift(expense));
     } catch (e) {
       throw DatabaseException('Не удалось добавить расход: $e');
     }
   }
 
-  /// Обновляет существующий расход
   static Future<void> updateExpense(Expense expense) async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-      await _db!.update(_db!.expenses).replace(_expenseToDrift(expense));
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      await (_db!.update(_db!.driftExpenses)..where((tbl) => tbl.id.equals(expense.id)))
+          .write(_expenseToDrift(expense));
     } catch (e) {
       throw DatabaseException('Не удалось обновить расход: $e');
     }
   }
 
-  /// Удаляет расход по ID
+  // ✅ НОВЫЙ МЕТОД: Переносит все расходы из одной категории в другую
+  static Future<void> reassignExpensesCategory(String oldCategoryName, String newCategoryName) async {
+    try {
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      await (_db!.update(_db!.driftExpenses)..where((tbl) => tbl.categoryName.equals(oldCategoryName)))
+          .write(DriftExpensesCompanion(categoryName: Value(newCategoryName)));
+    } catch (e) {
+      throw DatabaseException('Не удалось перенести расходы: $e');
+    }
+  }
+
+  // ✅ НОВЫЙ МЕТОД: Считает количество расходов в категории
+  static Future<int> countExpensesByCategory(String categoryName) async {
+    try {
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      final expenses = await (_db!.select(_db!.driftExpenses)..where((tbl) => tbl.categoryName.equals(categoryName))).get();
+      return expenses.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   static Future<void> deleteExpense(String id) async {
     try {
-      if (_db == null) {
-        throw DatabaseException('База данных не инициализирована');
-      }
-      await (_db!.delete(_db!.expenses)..where((tbl) => tbl.id.equals(id))).go();
+      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      await (_db!.delete(_db!.driftExpenses)..where((tbl) => tbl.id.equals(id))).go();
     } catch (e) {
       throw DatabaseException('Не удалось удалить расход: $e');
     }
   }
-
-  // ===== МАППИНГ (Преобразование типов) =====
 
   static Expense _driftToExpense(DriftExpense data) {
     return Expense(
@@ -94,8 +98,8 @@ class StorageService {
     );
   }
 
-  static ExpensesCompanion _expenseToDrift(Expense expense) {
-    return ExpensesCompanion.insert(
+  static DriftExpensesCompanion _expenseToDrift(Expense expense) {
+    return DriftExpensesCompanion.insert(
       id: expense.id,
       title: expense.title,
       description: Value(expense.description),

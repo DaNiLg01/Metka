@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/app_colors.dart';
 import '../data/category.dart';
 import '../data/category_service.dart';
 import '../../expenses/data/services/storage_service.dart';
+import '../../expenses/data/models/expense.dart';
 import 'category_form_dialog.dart';
 
 class CategoriesScreen extends StatefulWidget {
@@ -73,8 +75,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ],
         ),
-      ) ??
-          false;
+      ) ?? false;
+
+      if (confirmDelete) {
+        await StorageService.reassignExpensesCategory(
+          category.name,
+          ExpenseCategory.other.name,
+        );
+      }
     } else {
       confirmDelete = await showDialog<bool>(
         context: context,
@@ -94,8 +102,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ],
         ),
-      ) ??
-          false;
+      ) ?? false;
     }
 
     if (confirmDelete) {
@@ -123,10 +130,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.surfaceLight,
         title: Text(
           AppStrings.tr('categoriesScreen'),
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colorScheme.onPrimary),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.textLight : Colors.black87, // ✅ Гарантия видимости
+          ),
         ),
+        iconTheme: IconThemeData(color: isDark ? AppColors.textLight : Colors.black87),
+        elevation: isDark ? 0 : 1,
       ),
       body: _categories.isEmpty
           ? Center(

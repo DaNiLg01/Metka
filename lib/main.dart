@@ -3,8 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/theme_service.dart';
 import 'core/utils/settings_service.dart';
 import 'core/theme/app_colors.dart';
-import 'features/expenses/data/services/storage_service.dart'; // ✅ ДОБАВЛЕНО
-import 'features/categories/data/category_service.dart'; // ✅ ДОБАВЛЕНО
+import 'features/expenses/data/services/storage_service.dart';
+import 'features/categories/data/category_service.dart';
 import 'main_shell.dart';
 import 'core/database/app_database.dart';
 
@@ -16,7 +16,6 @@ final ValueNotifier<String> appCurrencyNotifier = ValueNotifier('RUB');
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ ИНИЦИАЛИЗАЦИЯ СЕРВИСОВ С ЕДИНЫМ ЭКЗЕМПЛЯРОМ БД
   StorageService.init(database);
   CategoryService.init(database);
 
@@ -31,7 +30,7 @@ void main() async {
 }
 
 class ExpenseApp extends StatefulWidget {
-  final bool isDarkTheme;
+  final bool? isDarkTheme;
   const ExpenseApp({super.key, required this.isDarkTheme});
 
   @override
@@ -39,7 +38,7 @@ class ExpenseApp extends StatefulWidget {
 }
 
 class _ExpenseAppState extends State<ExpenseApp> {
-  late bool _isDark;
+  late bool? _isDark;
 
   @override
   void initState() {
@@ -47,7 +46,7 @@ class _ExpenseAppState extends State<ExpenseApp> {
     _isDark = widget.isDarkTheme;
   }
 
-  void toggleTheme(bool isDark) {
+  void toggleTheme(bool? isDark) {
     setState(() {
       _isDark = isDark;
     });
@@ -63,7 +62,7 @@ class _ExpenseAppState extends State<ExpenseApp> {
           valueListenable: appCurrencyNotifier,
           builder: (context, currency, child) {
             return AnimatedTheme(
-              data: _isDark ? _darkTheme : _lightTheme,
+              data: _getTheme(),
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
               child: MaterialApp(
@@ -79,7 +78,7 @@ class _ExpenseAppState extends State<ExpenseApp> {
                   GlobalWidgetsLocalizations.delegate,
                   GlobalCupertinoLocalizations.delegate,
                 ],
-                theme: _isDark ? _darkTheme : _lightTheme,
+                theme: _getTheme(),
                 home: MainShell(onThemeChanged: toggleTheme),
               ),
             );
@@ -89,7 +88,14 @@ class _ExpenseAppState extends State<ExpenseApp> {
     );
   }
 
-  // ✅ ТЁМНАЯ ТЕМА С AppColors
+  ThemeData _getTheme() {
+    if (_isDark == null) {
+      final platformBrightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      return platformBrightness == Brightness.dark ? _darkTheme : _lightTheme;
+    }
+    return _isDark! ? _darkTheme : _lightTheme;
+  }
+
   ThemeData get _darkTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
@@ -105,23 +111,21 @@ class _ExpenseAppState extends State<ExpenseApp> {
       backgroundColor: AppColors.backgroundDark,
       elevation: 0,
       iconTheme: IconThemeData(color: AppColors.textLight),
+      foregroundColor: AppColors.textLight,
       titleTextStyle: TextStyle(
         color: AppColors.textLight,
         fontSize: 24,
         fontWeight: FontWeight.bold,
       ),
     ),
-    cardTheme: const CardThemeData(
-      color: AppColors.surfaceDark,
-      elevation: 0,
-    ),
+    cardTheme: const CardThemeData(color: AppColors.surfaceDark, elevation: 0),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.textLight,
     ),
   );
 
-  // ✅ СВЕТЛАЯ ТЕМА С AppColors
+  // ✅ ИСПРАВЛЕНО: Явно используем Colors.black87 для гарантии видимости текста
   ThemeData get _lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -136,17 +140,16 @@ class _ExpenseAppState extends State<ExpenseApp> {
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.surfaceLight,
       elevation: 1,
-      iconTheme: IconThemeData(color: AppColors.textDark),
+      // ✅ Явные тёмные цвета для светлой темы, чтобы текст точно был виден
+      iconTheme: IconThemeData(color: Colors.black87),
+      foregroundColor: Colors.black87,
       titleTextStyle: TextStyle(
-        color: AppColors.textDark,
+        color: Colors.black87,
         fontSize: 24,
         fontWeight: FontWeight.bold,
       ),
     ),
-    cardTheme: const CardThemeData(
-      color: AppColors.surfaceLight,
-      elevation: 0,
-    ),
+    cardTheme: const CardThemeData(color: AppColors.surfaceLight, elevation: 0),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.textLight,
