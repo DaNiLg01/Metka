@@ -1,12 +1,15 @@
-import '../../expenses/data/models/expense.dart';
+import 'package:intl/intl.dart';
+import '../../expenses/domain/entities/expense.dart'; // ✅ ИМПОРТ ИЗ DOMAIN
+import '../../expenses/data/services/storage_service.dart';
 import '../../categories/data/category.dart';
+import '../../categories/data/category_service.dart';
 
-/// Модель для данных круговой диаграммы
 class CategoryStats {
   final String categoryName;
   final String iconCode;
   final int colorValue;
   final double totalAmount;
+  final int count;
   final double percentage;
 
   CategoryStats({
@@ -14,117 +17,92 @@ class CategoryStats {
     required this.iconCode,
     required this.colorValue,
     required this.totalAmount,
+    required this.count,
     required this.percentage,
   });
 }
 
-/// Модель для данных графика по времени
 class DailyStats {
   final DateTime date;
   final double totalAmount;
+  final int count;
 
-  DailyStats({required this.date, required this.totalAmount});
+  DailyStats({required this.date, required this.totalAmount, required this.count});
 }
 
-/// Сервис для расчёта статистики
 class StatsService {
-  /// Получить статистику по категориям за период
-  static List<CategoryStats> getCategoryStats(
-      List<Expense> expenses,
-      DateTime? startDate,
-      DateTime? endDate,
-      ) {
-    // Фильтруем расходы по периоду
-    final filtered = _filterByDate(expenses, startDate, endDate);
+  static Future<List<CategoryStats>> getCategoryStats(List<Expense> expenses, DateTime? start, DateTime? end) async {
+    final categories = await CategoryService.loadCategories();
 
-    // Группируем по категориям (используем enum ExpenseCategory)
-    final Map<String, _CategoryData> categoryTotals = {};
-    double grandTotal = 0;
-
-    for (var expense in filtered) {
-      final catKey = expense.category.name;
-      if (!categoryTotals.containsKey(catKey)) {
-        categoryTotals[catKey] = _CategoryData(
-          name: expense.category.name,
-          iconCode: expense.category.iconName,
-          colorValue: expense.category.colorValue,
-          total: 0,
-        );
-      }
-      categoryTotals[catKey]!.total += expense.amount;
-      grandTotal += expense.amount;
-    }
-
-    // Создаём список статистики
-    return categoryTotals.values.map((data) {
-      return CategoryStats(
-        categoryName: data.name,
-        iconCode: data.iconCode,
-        colorValue: data.colorValue,
-        totalAmount: data.total,
-        percentage: grandTotal > 0 ? (data.total / grandTotal) * 100 : 0,
-      );
-    }).toList()
-      ..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
-  }
-
-  /// Получить статистику по дням
-  static List<DailyStats> getDailyStats(
-      List<Expense> expenses,
-      DateTime? startDate,
-      DateTime? endDate,
-      ) {
-    final filtered = _filterByDate(expenses, startDate, endDate);
-
-    final Map<String, double> dailyTotals = {};
-
-    for (var expense in filtered) {
-      final dateKey =
-          '${expense.date.year}-${expense.date.month}-${expense.date.day}';
-      dailyTotals[dateKey] = (dailyTotals[dateKey] ?? 0) + expense.amount;
-    }
-
-    return dailyTotals.entries.map((entry) {
-      final parts = entry.key.split('-');
-      return DailyStats(
-        date: DateTime(
-            int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2])),
-        totalAmount: entry.value,
-      );
-    }).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-  }
-
-  /// Фильтрация по дате
-  static List<Expense> _filterByDate(
-      List<Expense> expenses,
-      DateTime? startDate,
-      DateTime? endDate,
-      ) {
-    if (startDate == null && endDate == null) return expenses;
-
-    return expenses.where((e) {
-      if (startDate != null && e.date.isBefore(startDate)) return false;
-      if (endDate != null &&
-          e.date.isAfter(endDate.add(const Duration(days: 1)))) {
-        return false;
-      }
+    final filtered = expenses.where((e) {
+      if (start != null && e.date.isBefore(start)) return false;
+      if (end != null && e.date.isAfter(end.add(const Duration(days: 1)))) return false;
       return true;
     }).toList();
+
+    final double totalSum = filtered.fold(0.0, (sum, e) => sum + e.amount);
+    final Map<int, CategoryStats> statsMap = {};
+
+    for (final expense in filtered) {
+      final cat = categories.firstWhere(
+            (c) => c.id == expense.categoryId.toString(),
+        orElse: () => Category(id: expense.categoryId.toString(), name: 'Неизвестно', iconCode: 'more_horiz', colorValue: 0xFF9E9E9E),
+      );
+
+      if (statsMap.containsKey(expense.categoryId)) {
+        final current = statsMap[expense.categoryId]!;
+        statsMap[expense.categoryId] = CategoryStats(
+          categoryName: current.categoryName,
+          iconCode: current.iconCode,
+          colorValue: current.colorValue,
+          totalAmount: current.totalAmount + expense.amount,
+          count: current.count + 1,
+          percentage: totalSum > 0 ? ((current.totalAmount + expense.amount) / totalSum) * 100 : 0,
+        );
+      } else {
+        statsMap[expense.categoryId] = CategoryStats(
+          categoryName: cat.name,
+          iconCode: cat.iconCode,
+          colorValue: cat.colorValue,
+          totalAmount: expense.amount,
+          count: 1,
+          percentage: totalSum > 0 ? (expense.amount / totalSum) * 100 : 0,
+        );
+      }
+    }
+
+    return statsMap.values.toList()..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
   }
-}
 
-/// Вспомогательный класс для накопления данных
-class _CategoryData {
-  final String name;
-  final String iconCode;
-  final int colorValue;
-  double total;
+  static Future<List<DailyStats>> getDailyStats(List<Expense> expenses, DateTime? start, DateTime? end) async {
+    final filtered = expenses.where((e) {
+      if (start != null && e.date.isBefore(start)) return false;
+      if (end != null && e.date.isAfter(end.add(const Duration(days: 1)))) return false;
+      return true;
+    }).toList();
 
-  _CategoryData({
-    required this.name,
-    required this.iconCode,
-    required this.colorValue,
-    required this.total,
-  });
+    final Map<String, DailyStats> dailyMap = {};
+
+    for (final expense in filtered) {
+      final dateStr = DateFormat('yyyy-MM-dd').format(expense.date);
+      final date = expense.date;
+
+      if (dailyMap.containsKey(dateStr)) {
+        final current = dailyMap[dateStr]!;
+        dailyMap[dateStr] = DailyStats(
+          date: date,
+          totalAmount: current.totalAmount + expense.amount,
+          count: current.count + 1,
+        );
+      } else {
+        dailyMap[dateStr] = DailyStats(
+          date: date,
+          totalAmount: expense.amount,
+          count: 1,
+        );
+      }
+    }
+
+    return dailyMap.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+  }
 }

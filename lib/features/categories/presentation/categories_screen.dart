@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/di/service_locator.dart'; // ✅ DI
+import '../../../core/exceptions/app_exception.dart'; // ✅ ДОБАВЛЕНО: для обработки ошибок БД
+import '../../expenses/domain/repositories/expense_repository.dart'; // ✅ Domain Interface
 import '../data/category.dart';
 import '../data/category_service.dart';
-import '../../expenses/data/services/storage_service.dart';
-import '../../expenses/data/models/expense.dart';
 import 'category_form_dialog.dart';
 
 class CategoriesScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     });
   }
 
+  // ✅ ИСПРАВЛЕНО TC-07: добавлен try-catch для обработки дубликатов
   Future<void> _showCategoryForm({Category? category}) async {
     final result = await showDialog<Category>(
       context: context,
@@ -37,18 +39,31 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
 
     if (result != null) {
-      if (category == null) {
-        await CategoryService.addCategory(result);
-      } else {
-        await CategoryService.updateCategory(result);
+      try {
+        if (category == null) {
+          await CategoryService.addCategory(result);
+        } else {
+          await CategoryService.updateCategory(result);
+        }
+        _loadCategories();
+      } on DatabaseException catch (e) {
+        // ✅ Показываем понятную ошибку пользователю вместо падения приложения
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.message),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
-      _loadCategories();
     }
   }
 
   Future<void> _deleteCategory(Category category) async {
-    final expenses = await StorageService.loadExpenses();
-    final expensesCount = expenses.where((e) => e.category.name == category.name).length;
+    // ✅ Используем Repository через getIt
+    final expensesCount = await getIt<ExpenseRepository>().countExpensesByCategory(int.parse(category.id));
 
     bool confirmDelete = false;
 
@@ -78,10 +93,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       ) ?? false;
 
       if (confirmDelete) {
-        await StorageService.reassignExpensesCategory(
-          category.name,
-          ExpenseCategory.other.name,
-        );
+        final otherCategoryId = await CategoryService.getCategoryIdByName('Другое');
+        if (otherCategoryId != null) {
+          // ✅ Используем Repository через getIt
+          await getIt<ExpenseRepository>().reassignExpensesCategory(
+            int.parse(category.id),
+            otherCategoryId,
+          );
+        }
       }
     } else {
       confirmDelete = await showDialog<bool>(
@@ -136,7 +155,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.textLight : Colors.black87, // ✅ Гарантия видимости
+            color: isDark ? AppColors.textLight : Colors.black87,
           ),
         ),
         iconTheme: IconThemeData(color: isDark ? AppColors.textLight : Colors.black87),

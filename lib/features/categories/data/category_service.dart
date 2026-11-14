@@ -24,25 +24,49 @@ class CategoryService {
     }
   }
 
+  // ✅ ИСПРАВЛЕНО TC-07: проверка на дубликат имени
   static Future<void> addCategory(Category category) async {
+    if (_db == null) throw DatabaseException('База данных не инициализирована');
     try {
-      if (_db == null) throw DatabaseException('База данных не инициализирована');
+      final existing = await (_db!.select(_db!.driftCategories)
+        ..where((tbl) => tbl.name.equals(category.name)))
+          .getSingleOrNull();
+
+      if (existing != null) {
+        throw DatabaseException('Категория с таким названием уже существует');
+      }
+
       await _db!.into(_db!.driftCategories).insert(_categoryToDriftInsert(category));
+    } on DatabaseException {
+      rethrow; // ✅ Пробрасываем нашу ошибку как есть
     } catch (e) {
       throw DatabaseException('Не удалось добавить категорию: $e');
     }
   }
 
+  // ✅ ИСПРАВЛЕНО: при редактировании тоже проверяем уникальность имени
   static Future<void> updateCategory(Category category) async {
+    if (_db == null) throw DatabaseException('База данных не инициализирована');
     try {
-      if (_db == null) throw DatabaseException('База данных не инициализирована');
       final intId = int.tryParse(category.id) ?? 0;
+
+      // ✅ ИСПРАВЛЕНО: используем isNotValue() для корректного Expression в Drift
+      final existing = await (_db!.select(_db!.driftCategories)
+        ..where((tbl) => tbl.name.equals(category.name) & tbl.id.isNotValue(intId)))
+          .getSingleOrNull();
+
+      if (existing != null) {
+        throw DatabaseException('Категория с таким названием уже существует');
+      }
+
       await (_db!.update(_db!.driftCategories)..where((tbl) => tbl.id.equals(intId)))
           .write(DriftCategoriesCompanion(
         name: Value(category.name),
         iconCode: Value(category.iconCode),
         colorValue: Value(category.colorValue),
       ));
+    } on DatabaseException {
+      rethrow;
     } catch (e) {
       throw DatabaseException('Не удалось обновить категорию: $e');
     }
@@ -92,5 +116,18 @@ class CategoryService {
       iconCode: category.iconCode,
       colorValue: category.colorValue,
     );
+  }
+
+  // ✅ Метод для получения ID категории по имени (нужен для переноса расходов)
+  static Future<int?> getCategoryIdByName(String name) async {
+    try {
+      if (_db == null) return null;
+      final category = await (_db!.select(_db!.driftCategories)
+        ..where((tbl) => tbl.name.equals(name)))
+          .getSingleOrNull();
+      return category?.id;
+    } catch (e) {
+      return null;
+    }
   }
 }

@@ -1,7 +1,8 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/exceptions/app_exception.dart';
-import '../models/expense.dart';
+// ✅ ИМПОРТИРУЕМ DOMAIN ENTITY ВМЕСТО DATA MODEL
+import '../../domain/entities/expense.dart';
 
 class StorageService {
   static AppDatabase? _db;
@@ -53,22 +54,20 @@ class StorageService {
     }
   }
 
-  // ✅ НОВЫЙ МЕТОД: Переносит все расходы из одной категории в другую
-  static Future<void> reassignExpensesCategory(String oldCategoryName, String newCategoryName) async {
+  static Future<void> reassignExpensesCategory(int oldCategoryId, int newCategoryId) async {
     try {
       if (_db == null) throw DatabaseException('База данных не инициализирована');
-      await (_db!.update(_db!.driftExpenses)..where((tbl) => tbl.categoryName.equals(oldCategoryName)))
-          .write(DriftExpensesCompanion(categoryName: Value(newCategoryName)));
+      await (_db!.update(_db!.driftExpenses)..where((tbl) => tbl.categoryId.equals(oldCategoryId)))
+          .write(DriftExpensesCompanion(categoryId: Value(newCategoryId)));
     } catch (e) {
       throw DatabaseException('Не удалось перенести расходы: $e');
     }
   }
 
-  // ✅ НОВЫЙ МЕТОД: Считает количество расходов в категории
-  static Future<int> countExpensesByCategory(String categoryName) async {
+  static Future<int> countExpensesByCategory(int categoryId) async {
     try {
       if (_db == null) throw DatabaseException('База данных не инициализирована');
-      final expenses = await (_db!.select(_db!.driftExpenses)..where((tbl) => tbl.categoryName.equals(categoryName))).get();
+      final expenses = await (_db!.select(_db!.driftExpenses)..where((tbl) => tbl.categoryId.equals(categoryId))).get();
       return expenses.length;
     } catch (e) {
       return 0;
@@ -84,28 +83,28 @@ class StorageService {
     }
   }
 
+  // ✅ Маппинг: Drift -> Domain Entity
   static Expense _driftToExpense(DriftExpense data) {
     return Expense(
       id: data.id,
       title: data.title,
       description: data.description,
       amount: data.amount,
-      category: ExpenseCategory.values.firstWhere(
-            (e) => e.name == data.categoryName,
-        orElse: () => ExpenseCategory.other,
-      ),
+      categoryId: data.categoryId ?? 0,
       date: data.date,
     );
   }
 
+  // ✅ Маппинг: Domain Entity -> Drift
   static DriftExpensesCompanion _expenseToDrift(Expense expense) {
     return DriftExpensesCompanion.insert(
       id: expense.id,
       title: expense.title,
       description: Value(expense.description),
       amount: expense.amount,
-      categoryName: expense.category.name,
+      categoryId: Value(expense.categoryId),
       date: expense.date,
+      categoryName: const Value(''), // Заглушка для старой БД
     );
   }
 }

@@ -3,22 +3,20 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/theme_service.dart';
 import 'core/utils/settings_service.dart';
 import 'core/theme/app_colors.dart';
-import 'features/expenses/data/services/storage_service.dart';
-import 'features/categories/data/category_service.dart';
+import 'core/di/service_locator.dart'; // ✅ Импортируем наш DI
 import 'main_shell.dart';
-import 'core/database/app_database.dart';
-
-final AppDatabase database = AppDatabase();
 
 final ValueNotifier<Locale> appLocaleNotifier = ValueNotifier(const Locale('ru'));
 final ValueNotifier<String> appCurrencyNotifier = ValueNotifier('RUB');
 
 void main() async {
+  // 1. Инициализация Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
-  StorageService.init(database);
-  CategoryService.init(database);
+  // 2. ✅ НАСТРОЙКА DEPENDENCY INJECTION (вместо ручного init)
+  await setupServiceLocator();
 
+  // 3. Загрузка пользовательских настроек
   final isDark = await ThemeService.isDarkTheme();
   final locale = await SettingsService.getLocale();
   final currency = await SettingsService.getCurrency();
@@ -26,6 +24,7 @@ void main() async {
   appLocaleNotifier.value = locale;
   appCurrencyNotifier.value = currency;
 
+  // 4. Запуск приложения
   runApp(ExpenseApp(isDarkTheme: isDark));
 }
 
@@ -112,11 +111,7 @@ class _ExpenseAppState extends State<ExpenseApp> {
       elevation: 0,
       iconTheme: IconThemeData(color: AppColors.textLight),
       foregroundColor: AppColors.textLight,
-      titleTextStyle: TextStyle(
-        color: AppColors.textLight,
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-      ),
+      titleTextStyle: TextStyle(color: AppColors.textLight, fontSize: 24, fontWeight: FontWeight.bold),
     ),
     cardTheme: const CardThemeData(color: AppColors.surfaceDark, elevation: 0),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -125,7 +120,6 @@ class _ExpenseAppState extends State<ExpenseApp> {
     ),
   );
 
-  // ✅ ИСПРАВЛЕНО: Явно используем Colors.black87 для гарантии видимости текста
   ThemeData get _lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -140,14 +134,9 @@ class _ExpenseAppState extends State<ExpenseApp> {
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.surfaceLight,
       elevation: 1,
-      // ✅ Явные тёмные цвета для светлой темы, чтобы текст точно был виден
       iconTheme: IconThemeData(color: Colors.black87),
       foregroundColor: Colors.black87,
-      titleTextStyle: TextStyle(
-        color: Colors.black87,
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-      ),
+      titleTextStyle: TextStyle(color: Colors.black87, fontSize: 24, fontWeight: FontWeight.bold),
     ),
     cardTheme: const CardThemeData(color: AppColors.surfaceLight, elevation: 0),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(

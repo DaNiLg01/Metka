@@ -6,19 +6,6 @@ import 'dart:io';
 
 part 'app_database.g.dart';
 
-// ===== ТАБЛИЦА РАСХОДОВ =====
-class DriftExpenses extends Table {
-  TextColumn get id => text()();
-  TextColumn get title => text()();
-  TextColumn get description => text().withDefault(const Constant(''))();
-  RealColumn get amount => real()();
-  TextColumn get categoryName => text()();
-  DateTimeColumn get date => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
 // ===== ТАБЛИЦА КАТЕГОРИЙ =====
 class DriftCategories extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -27,28 +14,42 @@ class DriftCategories extends Table {
   IntColumn get colorValue => integer()();
 }
 
-// ===== БАЗА ДАННЫХ С МИГРАЦИЕЙ =====
-@DriftDatabase(tables: [DriftExpenses, DriftCategories])
+// ===== ТАБЛИЦА РАСХОДОВ =====
+class DriftExpenses extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text()();
+  TextColumn get description => text().withDefault(const Constant(''))();
+  RealColumn get amount => real()();
+
+  // ✅ Возвращаем старое поле, чтобы Drift знал о его существовании в БД.
+  // Делаем nullable, чтобы избежать конфликтов при миграции.
+  TextColumn get categoryName => text().nullable()();
+
+  // ✅ Новое поле с внешним ключом (Foreign Key)
+  IntColumn get categoryId => integer().nullable().references(DriftCategories, #id)();
+
+  DateTimeColumn get date => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// ===== БАЗА ДАННЫХ =====
+@DriftDatabase(tables: [DriftCategories, DriftExpenses])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // ✅ Увеличили версию схемы с 1 на 2
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
-  // ✅ Добавляем стратегию миграции
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
-      // При первом создании — создаём все таблицы
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      // ✅ При обновлении с версии 1 на 2: удаляем старые таблицы и создаём новые
-      if (from < 2) {
-        await m.deleteTable('expenses');
-        await m.deleteTable('categories');
-        await m.createAll();
+      if (from < 3) {
+        await m.addColumn(driftExpenses, driftExpenses.categoryId);
       }
     },
   );

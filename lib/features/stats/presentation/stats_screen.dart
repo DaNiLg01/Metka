@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../../../core/localization/app_strings.dart';
-import '../data/stats_service.dart';
+import '../../../../core/localization/app_strings.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../expenses/domain/entities/expense.dart'; // ✅ ИМПОРТ ИЗ DOMAIN
 import '../../expenses/data/services/storage_service.dart';
-import '../../expenses/data/models/expense.dart';
+import '../data/stats_service.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -14,384 +15,255 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  String _selectedPeriod = 'week';
-  DateTime? _startDate;
-  DateTime? _endDate;
   List<CategoryStats> _categoryStats = [];
   List<DailyStats> _dailyStats = [];
-  double _totalAmount = 0;
+  double _totalAmount = 0.0;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _setPeriod('week');
+    _loadStats();
   }
 
-  void _setPeriod(String period) {
-    setState(() {
-      _selectedPeriod = period;
-      _isLoading = true;
-    });
+  Future<void> _loadStats() async {
+    setState(() => _isLoading = true);
+    try {
+      final expenses = await StorageService.loadExpenses();
 
-    final now = DateTime.now();
-    DateTime? start;
-    DateTime? end;
+      final categoryStats = await StatsService.getCategoryStats(expenses, null, null);
+      final dailyStats = await StatsService.getDailyStats(expenses, null, null);
 
-    switch (period) {
-      case 'week':
-        start = now.subtract(Duration(days: now.weekday - 1));
-        end = now;
-        break;
-      case 'month':
-        start = DateTime(now.year, now.month, 1);
-        end = now;
-        break;
-      case 'custom':
-        start = _startDate ?? now.subtract(const Duration(days: 7));
-        end = _endDate ?? now;
-        break;
-    }
-
-    _loadStats(start, end);
-  }
-
-  Future<void> _loadStats(DateTime? start, DateTime? end) async {
-    final expenses = await StorageService.loadExpenses();
-    final categoryStats = StatsService.getCategoryStats(expenses, start, end);
-    final dailyStats = StatsService.getDailyStats(expenses, start, end);
-
-    setState(() {
-      _categoryStats = categoryStats;
-      _dailyStats = dailyStats;
-      _totalAmount = categoryStats.fold(0, (sum, stat) => sum + stat.totalAmount);
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _selectDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _startDate != null && _endDate != null
-          ? DateTimeRange(start: _startDate!, end: _endDate!)
-          : null,
-    );
-
-    if (picked != null) {
       setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
+        _categoryStats = categoryStats;
+        _dailyStats = dailyStats;
+        _totalAmount = categoryStats.fold(0.0, (sum, stat) => sum + stat.totalAmount);
       });
-      _setPeriod('custom');
+    } catch (e) {
+      debugPrint('Ошибка загрузки статистики: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? const Color(0xFF1E1E2E) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF121218);
-    final subtitleColor = isDark ? const Color(0xFF8B8B9E) : const Color(0xFF666666);
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.surfaceLight,
         title: Text(
           AppStrings.tr('statsScreen'),
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? AppColors.textLight : Colors.black87),
         ),
+        iconTheme: IconThemeData(color: isDark ? AppColors.textLight : Colors.black87),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+          : _categoryStats.isEmpty
+          ? Center(child: Text(AppStrings.tr('noExpenses'), style: TextStyle(color: colorScheme.onSurfaceVariant)))
+          : ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Период
-            Card(
-              color: surfaceColor,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppStrings.tr('period'),
-                      style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+        children: [
+          Card(
+            color: colorScheme.surface,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(
+                    AppStrings.tr('totalForPeriod'),
+                    style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_totalAmount.toStringAsFixed(2)} ${AppStrings.getCurrencySymbol()}',
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        _PeriodChip(
-                          label: AppStrings.tr('week'),
-                          isSelected: _selectedPeriod == 'week',
-                          onTap: () => _setPeriod('week'),
-                        ),
-                        _PeriodChip(
-                          label: AppStrings.tr('month'),
-                          isSelected: _selectedPeriod == 'month',
-                          onTap: () => _setPeriod('month'),
-                        ),
-                        _PeriodChip(
-                          label: AppStrings.tr('custom'),
-                          isSelected: _selectedPeriod == 'custom',
-                          onTap: _selectDateRange,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Всего за период
-            Card(
-              color: surfaceColor,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppStrings.tr('totalForPeriod'),
-                      style: TextStyle(color: subtitleColor, fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      // ✅ ИСПРАВЛЕНО: Динамическая валюта
-                      '${_totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // По категориям
-            if (_categoryStats.isNotEmpty) ...[
-              Card(
-                color: surfaceColor,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.tr('byCategories'),
-                        style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        height: 200,
-                        child: PieChart(
-                          PieChartData(
-                            sections: _categoryStats.map((stat) {
-                              return PieChartSectionData(
-                                value: stat.totalAmount,
-                                title: '${stat.percentage.toStringAsFixed(0)}%',
-                                color: Color(stat.colorValue),
-                                radius: 80,
-                                titleStyle: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                              );
-                            }).toList(),
-                            centerSpaceRadius: 40,
-                            pieTouchData: PieTouchData(
-                              touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                                if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) return;
-                                final touchedSection = pieTouchResponse.touchedSection!;
-                                final stat = _categoryStats[touchedSection.touchedSectionIndex];
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    // ✅ ИСПРАВЛЕНО: Динамическая валюта
-                                    content: Text('${AppStrings.translateCategory(stat.categoryName)}: ${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}'),
-                                    duration: const Duration(seconds: 1),
-                                  ),
-                                );
-                              },
+          ),
+          const SizedBox(height: 16),
+          Card(
+            color: colorScheme.surface,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.tr('byCategories'),
+                    style: TextStyle(color: colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._categoryStats.map((stat) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Color(stat.colorValue).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              _getIconData(stat.iconCode),
+                              color: Color(stat.colorValue),
+                              size: 24,
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  AppStrings.translateCategory(stat.categoryName),
+                                  style: TextStyle(color: colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w500),
+                                ),
+                                const SizedBox(height: 4),
+                                LinearProgressIndicator(
+                                  value: stat.percentage / 100,
+                                  backgroundColor: colorScheme.onSurface.withOpacity(0.1),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(stat.colorValue)),
+                                  minHeight: 6,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
+                                style: TextStyle(color: colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '${stat.percentage.toStringAsFixed(0)}%',
+                                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      ..._categoryStats.map((stat) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: Color(stat.colorValue),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                AppStrings.translateCategory(stat.categoryName),
-                                style: TextStyle(color: textColor),
-                              ),
-                            ),
-                            Text(
-                              // ✅ ИСПРАВЛЕНО: Динамическая валюта
-                              '${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
-                              style: TextStyle(color: subtitleColor),
-                            ),
-                          ],
-                        ),
-                      )),
-                    ],
-                  ),
-                ),
+                    );
+                  }).toList(),
+                ],
               ),
-              const SizedBox(height: 16),
-            ],
-
-            // По дням
-            if (_dailyStats.isNotEmpty)
-              Card(
-                color: surfaceColor,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.tr('byDays'),
-                        style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 200,
-                        child: BarChart(
-                          BarChartData(
-                            barGroups: _dailyStats.map((stat) {
-                              return BarChartGroupData(
-                                x: _dailyStats.indexOf(stat),
-                                barRods: [
-                                  BarChartRodData(
-                                    toY: stat.totalAmount,
-                                    color: const Color(0xFF3D5A80),
-                                    width: 16,
-                                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            color: colorScheme.surface,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.tr('byDays'),
+                    style: TextStyle(color: colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 200,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: _dailyStats.isNotEmpty
+                            ? _dailyStats.map((e) => e.totalAmount).reduce((a, b) => a > b ? a : b) * 1.2
+                            : 100,
+                        barTouchData: BarTouchData(
+                          enabled: true,
+                          touchTooltipData: BarTouchTooltipData(
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              final stat = _dailyStats[group.x.toInt()];
+                              return BarTooltipItem(
+                                '${DateFormat('dd.MM').format(stat.date)}\n',
+                                const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                children: [
+                                  TextSpan(
+                                    text: '${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
+                                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                                   ),
                                 ],
                               );
-                            }).toList(),
-                            titlesData: FlTitlesData(
-                              show: true,
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: (value, meta) {
-                                    final stat = _dailyStats[value.toInt()];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: Text(
-                                        '${stat.date.day}.${stat.date.month}',
-                                        style: TextStyle(color: subtitleColor, fontSize: 10),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            ),
-                            gridData: FlGridData(show: false),
-                            borderData: FlBorderData(show: false),
-                            barTouchData: BarTouchData(
-                              enabled: true,
-                              touchTooltipData: BarTouchTooltipData(
-                                getTooltipColor: (group) => const Color(0xFF3D5A80),
-                                getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                  final stat = _dailyStats[groupIndex];
-                                  return BarTooltipItem(
-                                    // ✅ ИСПРАВЛЕНО: Динамическая валюта
-                                    '${stat.date.day}.${stat.date.month}\n${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
-                                    const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
+                            },
+                          ),
+                        ),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                if (value.toInt() < _dailyStats.length) {
+                                  final date = _dailyStats[value.toInt()].date;
+                                  return Text(
+                                    '${date.day}.${date.month}',
+                                    style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 10),
                                   );
-                                },
-                                tooltipMargin: 8,
-                              ),
-                              touchCallback: (FlTouchEvent event, barTouchResponse) {
-                                if (!event.isInterestedForInteractions || barTouchResponse == null || barTouchResponse.spot == null) return;
-
-                                final spot = barTouchResponse.spot!;
-                                final int index = spot.touchedBarGroup.x;
-                                final stat = _dailyStats[index];
-
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    // ✅ ИСПРАВЛЕНО: Динамическая валюта
-                                    content: Text('${stat.date.day}.${stat.date.month}: ${stat.totalAmount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}'),
-                                    duration: const Duration(seconds: 1),
-                                  ),
-                                );
+                                }
+                                return const Text('');
                               },
                             ),
                           ),
+                          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                         ),
+                        borderData: FlBorderData(show: false),
+                        barGroups: _dailyStats.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final stat = entry.value;
+                          return BarChartGroupData(
+                            x: index,
+                            barRods: [
+                              BarChartRodData(
+                                toY: stat.totalAmount,
+                                color: colorScheme.primary,
+                                width: 16,
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                              ),
+                            ],
+                          );
+                        }).toList(),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _PeriodChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PeriodChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3D5A80) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF3D5A80) : Colors.grey.withOpacity(0.3),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
+  IconData _getIconData(String iconCode) {
+    switch (iconCode) {
+      case 'restaurant': return Icons.restaurant;
+      case 'directions_car': return Icons.directions_car;
+      case 'shopping_bag': return Icons.shopping_bag;
+      case 'movie': return Icons.movie;
+      case 'favorite': return Icons.favorite;
+      case 'more_horiz': return Icons.more_horiz;
+      case 'shopping_cart': return Icons.shopping_cart;
+      case 'flight': return Icons.flight;
+      case 'home': return Icons.home;
+      default: return Icons.category;
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/expense.dart';
-import '../../data/services/storage_service.dart';
+import '../../../../core/di/service_locator.dart'; // ✅ ДОБАВЛЕНО: для getIt
+import '../../domain/entities/expense.dart'; // ✅ ИСПРАВЛЕНО: Domain Entity
+import '../../domain/repositories/expense_repository.dart'; // ✅ ДОБАВЛЕНО: интерфейс репозитория
 import '../../../../core/exceptions/app_exception.dart';
 import 'expense_state.dart';
 
@@ -11,7 +12,8 @@ class ExpenseCubit extends Cubit<ExpenseState> {
   Future<void> loadExpenses() async {
     emit(ExpenseLoading());
     try {
-      final expenses = await StorageService.loadExpenses();
+      // ✅ ИСПОЛЬЗУЕМ REPOSITORY ЧЕРЕЗ GET_IT (вместо StorageService)
+      final expenses = await getIt<ExpenseRepository>().getExpenses();
       emit(ExpenseLoaded(expenses));
     } on AppException catch (e) {
       emit(ExpenseError(e.message));
@@ -23,7 +25,7 @@ class ExpenseCubit extends Cubit<ExpenseState> {
   /// Добавление расхода
   Future<void> addExpense(Expense expense) async {
     try {
-      await StorageService.addExpense(expense);
+      await getIt<ExpenseRepository>().addExpense(expense);
       // После добавления перезагружаем список
       await loadExpenses();
     } on AppException catch (e) {
@@ -34,7 +36,7 @@ class ExpenseCubit extends Cubit<ExpenseState> {
   /// Обновление расхода
   Future<void> updateExpense(Expense expense) async {
     try {
-      await StorageService.updateExpense(expense);
+      await getIt<ExpenseRepository>().updateExpense(expense);
       await loadExpenses();
     } on AppException catch (e) {
       emit(ExpenseError(e.message));
@@ -44,7 +46,7 @@ class ExpenseCubit extends Cubit<ExpenseState> {
   /// Удаление расхода
   Future<void> deleteExpense(String id) async {
     try {
-      await StorageService.deleteExpense(id);
+      await getIt<ExpenseRepository>().deleteExpense(id);
       await loadExpenses();
     } on AppException catch (e) {
       emit(ExpenseError(e.message));

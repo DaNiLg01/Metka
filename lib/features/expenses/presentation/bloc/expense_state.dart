@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../data/models/expense.dart';
+// ✅ ИСПРАВЛЕНО: импортируем Domain Entity вместо удалённой Data Model
+import '../../domain/entities/expense.dart';
 
 abstract class ExpenseState extends Equatable {
   const ExpenseState();

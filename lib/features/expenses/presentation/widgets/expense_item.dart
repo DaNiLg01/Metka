@@ -1,79 +1,53 @@
 import 'package:flutter/material.dart';
-import '../../data/models/expense.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/localization/app_strings.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../domain/entities/expense.dart'; // ✅ ИМПОРТИРУЕМ DOMAIN ENTITY
+import '../../../categories/data/category.dart';
 
 class ExpenseItem extends StatelessWidget {
   final Expense expense;
-  final VoidCallback onDelete;
+  final Category category;
 
   const ExpenseItem({
     super.key,
     required this.expense,
-    required this.onDelete,
+    required this.category,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final subtitleColor = isDark ? const Color(0xFF8B8B9E) : const Color(0xFF666666);
 
     return Card(
       color: colorScheme.surface,
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Hero(
-              tag: 'category_${expense.category.name}',
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Color(expense.category.colorValue).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  expense.category.icon,
-                  color: Color(expense.category.colorValue),
-                  size: 24,
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    expense.title,
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (expense.description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      expense.description,
-                      style: TextStyle(color: subtitleColor, fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Text(
-              '- ${expense.amount.toStringAsFixed(0)} ${AppStrings.getCurrencySymbol()}',
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: category.color.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(category.iconData, color: category.color, size: 24),
+        ),
+        title: Text(
+          expense.title,
+          style: TextStyle(color: colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          '${AppStrings.translateCategory(category.name)} • ${DateFormat('dd.MM.yyyy').format(expense.date)}',
+          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+        ),
+        trailing: Text(
+          '${expense.amount.toStringAsFixed(2)} ${AppStrings.getCurrencySymbol()}',
+          style: TextStyle(
+            color: isDark ? AppColors.textLight : Colors.black87,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
